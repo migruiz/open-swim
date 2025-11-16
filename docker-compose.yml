@@ -9,7 +9,7 @@ services:
     devices:
       - /dev:/dev
     volumes:
-      - /mnt/openswim:/mnt/openswim:shared
+      - /run/udev:/run/udev:ro
     environment:
       - MQTT_BROKER_URI=mqtt://host.docker.internal:1883
     extra_hosts:
