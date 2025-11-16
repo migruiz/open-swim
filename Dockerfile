@@ -38,8 +38,15 @@ COPY --from=build /usr/local/bin/open-swim /usr/local/bin/open-swim
 COPY --from=build /app/src /app/src
 COPY --from=build /app/README.md /app/README.md
 
-# Drop privileges (security best practice)
-RUN useradd -m appuser && chown -R appuser /app
-USER appuser
+# Install required system utilities for device management
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    util-linux \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create mount point directory
+RUN mkdir -p /mnt/openswim
+
+# Run as root to allow mounting operations
+# Note: Container must be run with --privileged flag or appropriate capabilities
 
 CMD ["open-swim"]

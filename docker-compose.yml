@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  open-swim:
+    image: migruiz/open-swim:latest
+    container_name: open-swim
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev:/dev
+    volumes:
+      - /mnt/openswim:/mnt/openswim:shared
+    environment:
+      - MQTT_BROKER_URI=mqtt://host.docker.internal:1883
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
