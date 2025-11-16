@@ -1,53 +1,48 @@
 # syntax=docker/dockerfile:1.7
-##############################################
-# Base builder stage (multi-arch capable)
-##############################################
-FROM --platform=$TARGETPLATFORM python:3.12-slim AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    UV_NO_SYNC_PROGRESS=1 \
-    VENV_PATH=/opt/venv
+# Stage 1: Build dependencies
+FROM --platform=$TARGETPLATFORM python:3.12-slim AS build
+WORKDIR /app
 
-# Install system deps (if any needed later) and curl for uv installation
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv (static binary) - https://docs.astral.sh/uv/installation/#standalone-installer
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install uv
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-WORKDIR /app
-
-# Copy project metadata first for layer caching
+# Copy dependency files first for better layer caching
 COPY pyproject.toml README.md ./
-# If you have a lock file later, uncomment:
-# COPY uv.lock ./
+# COPY uv.lock ./  # uncomment when lock file is added
 
-# Create venv and install deps (none yet, but keeps flow consistent)
-RUN uv venv $VENV_PATH \
- && . $VENV_PATH/bin/activate \
- && uv sync --no-dev --frozen || uv sync --no-dev
+# Sync dependencies into .venv (creates virtual environment)
+RUN uv sync --frozen --no-dev || uv sync --no-dev
 
-# Copy source after deps
+# Copy application source
 COPY src ./src
 
-# Install project into venv as a package (editable not needed inside container)
-RUN . $VENV_PATH/bin/activate && uv pip install .
+# Install the project package into the venv
+RUN uv pip install --no-deps .
 
-##############################################
-# Runtime stage (slim final image)
-##############################################
+# Stage 2: Runtime image (same base = compatible venv)
 FROM --platform=$TARGETPLATFORM python:3.12-slim AS runtime
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 VENV_PATH=/opt/venv
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+
 WORKDIR /app
 
-# Copy venv from builder (contains deps + project)
-COPY --from=builder $VENV_PATH $VENV_PATH
-COPY --from=builder /app/src /app/src
-COPY --from=builder /app/README.md /app/README.md
+# Copy virtual environment from build stage
+COPY --from=build /app/.venv /opt/venv
 
-ENV PATH="$VENV_PATH/bin:$PATH"
+# Copy application source and metadata
+COPY --from=build /app/src /app/src
+COPY --from=build /app/README.md /app/README.md
 
-# Default command runs the console script defined in pyproject
+# Fix shebang in console scripts to point to relocated venv
+RUN sed -i 's|#!/app/.venv/bin/python|#!/opt/venv/bin/python|g' /opt/venv/bin/*
+
+# Drop privileges (security best practice)
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
+
 CMD ["open-swim"]

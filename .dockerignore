@@ -4,4 +4,4 @@ __pycache__/
 .git/
 .gitignore
 Dockerfile
-README.md
+# Allow README.md into build context (needed for Dockerfile COPY)
