@@ -12,7 +12,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo === Running container (port 3000) ===
+echo === Running container ===
 docker run --rm --name open-swim %IMAGE%:%TAG%
 
 endlocal
