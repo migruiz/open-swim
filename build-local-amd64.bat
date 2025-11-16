@@ -13,6 +13,6 @@ if errorlevel 1 (
 )
 
 echo === Running container ===
-docker run --rm --name open-swim %IMAGE%:%TAG%
+docker run --rm --name open-swim -e MQTT_BROKER_URI=mqtt://pi:1883 %IMAGE%:%TAG%
 
 endlocal
