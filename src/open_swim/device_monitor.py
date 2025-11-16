@@ -4,7 +4,6 @@ import subprocess
 import json
 from typing import Optional
 import paho.mqtt.client as mqtt
-import pyudev
 
 OPEN_SWIM_LABEL = "OpenSwim"
 MOUNT_POINT = "/mnt/openswim"
@@ -16,12 +15,22 @@ class DeviceMonitor:
         self.mqtt_client = mqtt_client
         self.connected = False
         self.current_dev: Optional[str] = None
-        self.context = pyudev.Context()
+        
+    def get_block_devices(self):
+        """Returns a list of block devices like sda1, sdb1, etc."""
+        devices = []
+        try:
+            for name in os.listdir("/dev"):
+                if name.startswith("sd") and name[-1].isdigit():
+                    devices.append("/dev/" + name)
+        except Exception as e:
+            print(f"[ERROR] Failed to list devices: {e}")
+        return devices
 
     def get_label(self, dev: str) -> Optional[str]:
         """Returns filesystem label of a device or None."""
         try:
-            output = subprocess.check_output(["blkid", dev], stderr=subprocess.DEVNULL).decode()
+            output = subprocess.check_output(["blkid", dev]).decode()
             for part in output.split():
                 if part.startswith("LABEL=") or part.startswith("LABEL_FATBOOT="):
                     return part.split("=")[1].strip('"')
@@ -74,72 +83,60 @@ class DeviceMonitor:
             "timestamp": time.time()
         })
         
-        self.mqtt_client.publish(topic, payload, qos=1, retain=True)
+        result = self.mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published connection event to {topic}")
 
     def on_disconnected(self):
         """Handle device disconnection event."""
         print("[EVENT] OpenSwim disconnected")
         
+        # Publish MQTT message
         topic = "openswim/device/status"
         payload = json.dumps({
             "status": "disconnected",
             "timestamp": time.time()
         })
         
-        self.mqtt_client.publish(topic, payload, qos=1, retain=True)
+        result = self.mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published disconnection event to {topic}")
 
-    def check_existing_devices(self):
-        """Check for already connected OpenSwim devices on startup."""
-        print("[INFO] Checking for existing devices...")
-        for device in self.context.list_devices(subsystem='block', DEVTYPE='partition'):
-            label = self.get_label(device.device_node)
-            if label == OPEN_SWIM_LABEL:
-                print(f"[INFO] Found existing OpenSwim device: {device.device_node}")
-                if self.mount_device(device.device_node):
-                    self.on_connected(device.device_node)
-                    self.connected = True
-                    self.current_dev = device.device_node
-                return
-
     def monitor_loop(self):
-        """Main monitoring loop using udev events."""
+        """Main monitoring loop."""
         print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
-        
-        # Check for devices already connected
-        self.check_existing_devices()
-        
-        # Set up udev monitor for new connections
-        monitor = pyudev.Monitor.from_netlink(self.context)
-        monitor.filter_by(subsystem='block', device_type='partition')
-        
-        try:
-            for device in iter(monitor.poll, None):
-                if device.action == 'add':
-                    # Wait a moment for device to be ready
-                    time.sleep(0.5)
-                    label = self.get_label(device.device_node)
-                    
-                    if label == OPEN_SWIM_LABEL and not self.connected:
-                        print(f"[INFO] Detected new device: {device.device_node}")
-                        if self.mount_device(device.device_node):
-                            self.on_connected(device.device_node)
-                            self.connected = True
-                            self.current_dev = device.device_node
+
+        while True:
+            try:
+                devices = self.get_block_devices()
+                found_dev = None
+
+                # Look for OpenSwim among all detected devices
+                for dev in devices:
+                    label = self.get_label(dev)
+                    if label == OPEN_SWIM_LABEL:
+                        found_dev = dev
+                        break
+
+                if found_dev and not self.connected:
+                    # Device plugged in
+                    if self.mount_device(found_dev):
+                        self.on_connected(found_dev)
+                        self.connected = True
+                        self.current_dev = found_dev
+
+                if self.connected and (not found_dev):
+                    # Device unplugged
+                    self.unmount_device()
+                    self.on_disconnected()
+                    self.connected = False
+                    self.current_dev = None
+
+                time.sleep(1)
                 
-                elif device.action == 'remove':
-                    if self.connected and device.device_node == self.current_dev:
-                        self.unmount_device()
-                        self.on_disconnected()
-                        self.connected = False
-                        self.current_dev = None
-                        
-        except KeyboardInterrupt:
-            print("\n[INFO] Stopping device monitor...")
-            if self.connected:
-                self.unmount_device()
-            raise
-        except Exception as e:
-            print(f"[ERROR] Monitor loop error: {e}")
-            time.sleep(5)
+            except KeyboardInterrupt:
+                print("\n[INFO] Stopping device monitor...")
+                if self.connected:
+                    self.unmount_device()
+                raise
+            except Exception as e:
+                print(f"[ERROR] Monitor loop error: {e}")
+                time.sleep(5)  # Wait longer on error

@@ -41,7 +41,6 @@ COPY --from=build /app/README.md /app/README.md
 # Install required system utilities for device management
 RUN apt-get update && apt-get install -y --no-install-recommends \
     util-linux \
-    udev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create mount point directory
