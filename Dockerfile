@@ -14,32 +14,29 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml README.md ./
 # COPY uv.lock ./  # uncomment when lock file is added
 
-# Sync dependencies into .venv (creates virtual environment)
-RUN uv sync --frozen --no-dev || uv sync --no-dev
+# Install dependencies directly into system Python (no venv)
+RUN uv pip install --system --no-cache .
 
 # Copy application source
 COPY src ./src
 
-# Install the project package into the venv
-RUN uv pip install --no-deps .
+# Install the project package
+RUN uv pip install --system --no-cache --no-deps .
 
-# Stage 2: Runtime image (same base = compatible venv)
+# Stage 2: Runtime image
 FROM --platform=$TARGETPLATFORM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH=/opt/venv/bin:$PATH
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Copy virtual environment from build stage
-COPY --from=build /app/.venv /opt/venv
+# Copy installed packages from system site-packages
+COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=build /usr/local/bin/open-swim /usr/local/bin/open-swim
 
 # Copy application source and metadata
 COPY --from=build /app/src /app/src
 COPY --from=build /app/README.md /app/README.md
-
-# Fix shebang in console scripts to point to relocated venv
-RUN sed -i 's|#!/app/.venv/bin/python|#!/opt/venv/bin/python|g' /opt/venv/bin/*
 
 # Drop privileges (security best practice)
 RUN useradd -m appuser && chown -R appuser /app
