@@ -1,7 +1,9 @@
 import os
 import time
+import threading
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
+from open_swim.device_monitor import DeviceMonitor
 
 def on_connect(client, userdata, flags, rc, properties=None):
     """Callback when the client connects to the broker."""
@@ -68,10 +70,10 @@ def main() -> None:
         result = client.publish(test_topic, test_message)
         print(f"Publishing message to topic '{test_topic}': {test_message}")
         
-        # Keep the program running to receive messages
-        print("Listening for messages... Press Ctrl+C to exit")
-        while True:
-            time.sleep(1)
+        # Start device monitor
+        monitor = DeviceMonitor(client)
+        print("[INFO] Starting OpenSwim device monitor...")
+        monitor.monitor_loop()
             
     except KeyboardInterrupt:
         print("\nDisconnecting from MQTT broker...")
