@@ -8,7 +8,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
         print(f"Connected to MQTT broker successfully")
         # Subscribe to test topic
-        test_topic = os.getenv("MQTT_TEST_TOPIC", "test/topic")
+        test_topic =  "test/topic"
         client.subscribe(test_topic)
         print(f"Subscribed to topic: {test_topic}")
     else:
@@ -63,7 +63,7 @@ def main() -> None:
         time.sleep(2)
         
         # Publish a test message
-        test_topic = os.getenv("MQTT_TEST_TOPIC", "test/topic")
+        test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
         result = client.publish(test_topic, test_message)
         print(f"Publishing message to topic '{test_topic}': {test_message}")
