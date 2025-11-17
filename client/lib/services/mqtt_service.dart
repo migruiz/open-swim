@@ -5,29 +5,33 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 
 class MqttService {
   MqttServerClient? client;
-  final String broker = 'mqtt.piscos.ovh';
+  final String broker = 'wss://mqtt.tenjo.ovh';
   final int port = 443;
+  final String username = 'pi';
+  final String password = 'hackol37';
   final String clientId = 'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
   
   final StreamController<String> _messageController = StreamController<String>.broadcast();
   Stream<String> get messages => _messageController.stream;
 
   Future<bool> connect() async {
-    client = MqttServerClient.withPort(broker, clientId, port);
+    client =  MqttServerClient(broker, clientId);
     client!.logging(on: true);
     client!.keepAlivePeriod = 60;
     client!.onConnected = onConnected;
     client!.onDisconnected = onDisconnected;
     client!.onSubscribed = onSubscribed;
     client!.pongCallback = pong;
-    client!.secure = true;
-    client!.securityContext = SecurityContext.defaultContext;
+    client!.useWebSocket = true;
+    client!.port = port;
     client!.websocketProtocols = MqttClientConstants.protocolsSingleDefault;
+    client!.setProtocolV311();
 
     final connMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
+        .authenticateAs(username, password)
         .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
+        .withWillQos(MqttQos.atMostOnce);
     
     client!.connectionMessage = connMessage;
 
