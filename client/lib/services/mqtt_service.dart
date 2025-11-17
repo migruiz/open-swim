@@ -51,7 +51,7 @@ class MqttService {
       subscribeToTopic('openswim/device/status');
       
       // Publish a message
-      publishMessage('openswim/device/status', 'Hello from Flutter client!');
+      publishMessage('test/topic', 'Hello from Flutter client!');
       
       return true;
     } else {
