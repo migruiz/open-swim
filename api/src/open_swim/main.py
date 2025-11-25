@@ -17,6 +17,7 @@ def main() -> None:
          # Publish a test message
         test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
+        mqtt_client.subscribe("test/topic")
         mqtt_client.publish(test_topic, test_message)
         print(f"Publishing message to topic '{test_topic}': {test_message}")
     
@@ -58,7 +59,10 @@ def main() -> None:
     )
     
     try:
-        mqtt_client.connect()    
+        mqtt_client.connect()
+        # Keep the main thread alive to allow MQTT and device monitoring to run
+        while True:
+            time.sleep(1)
             
     except KeyboardInterrupt:
         print("\nShutting down...")
