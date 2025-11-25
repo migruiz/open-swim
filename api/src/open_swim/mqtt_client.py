@@ -36,7 +36,7 @@ class MQTTClient:
         """Internal callback when a message is published."""
         print(f"Message published with mid: {mid}")
     
-    def connect(self, broker_uri: Optional[str] = None):
+    def loop_forever(self, broker_uri: Optional[str] = None):
         """Connect to MQTT broker."""
         # Load environment variables if not already loaded
         load_dotenv()
@@ -70,7 +70,7 @@ class MQTTClient:
         self.client.connect(self.broker_host, self.broker_port, 60)
         
         # Start the network loop in a background thread
-        self.client.loop_start()
+        self.client.loop_forever()
         
         # Wait a moment for connection to establish
         time.sleep(2)
@@ -83,16 +83,10 @@ class MQTTClient:
             self.client.disconnect()
     
     def publish(self, topic: str, payload: str, qos: int = 0, retain: bool = False):
-        """Publish a message to a topic."""
-        if not self.client:
-            raise RuntimeError("MQTT client not connected")
-        
+        """Publish a message to a topic."""        
         return self.client.publish(topic, payload, qos=qos, retain=retain)
     
     def subscribe(self, topic: str, qos: int = 0):
         """Subscribe to a topic."""
-        if not self.client:
-            raise RuntimeError("MQTT client not connected")
-        
         self.client.subscribe(topic, qos=qos)
         print(f"Subscribed to topic: {topic}")

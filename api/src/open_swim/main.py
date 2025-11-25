@@ -13,7 +13,7 @@ def main() -> None:
     def on_mqtt_connected():
         """Subscribe to test topic when connected."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        monitor.monitor_loop()
+        monitor.start_monitoring()
          # Publish a test message
         test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
@@ -59,10 +59,7 @@ def main() -> None:
     )
     
     try:
-        mqtt_client.connect()
-        # Keep the main thread alive to allow MQTT and device monitoring to run
-        while True:
-            time.sleep(1)
+        mqtt_client.loop_forever()
             
     except KeyboardInterrupt:
         print("\nShutting down...")

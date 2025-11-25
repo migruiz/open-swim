@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 from typing import Optional, Callable
+import threading
 
 OPEN_SWIM_LABEL = "OpenSwim"
 MOUNT_POINT = "/mnt/openswim"
@@ -90,43 +91,55 @@ class DeviceMonitor:
         # Call the callback
         self.on_disconnected_callback()
 
-    def monitor_loop(self):
-        """Main monitoring loop."""
+    def start_monitoring(self):
+        """Start the monitoring loop in a background thread."""
+        if hasattr(self, "_monitor_thread") and self._monitor_thread.is_alive():
+            print("[INFO] Monitoring already running.")
+            return
+        self._stop_event = threading.Event()
+        self._monitor_thread = threading.Thread(target=self._monitor_loop_background, daemon=True)
+        self._monitor_thread.start()
+        print("[INFO] Device monitoring started in background.")
+
+    def stop_monitoring(self):
+        """Stop the background monitoring loop."""
+        if hasattr(self, "_stop_event"):
+            self._stop_event.set()
+            if hasattr(self, "_monitor_thread"):
+                self._monitor_thread.join()
+            print("[INFO] Device monitoring stopped.")
+
+    def _monitor_loop_background(self):
+        """Background thread target for monitoring loop."""
+        while not self._stop_event.is_set():
+            self._monitor_loop()
+
+    def _monitor_loop(self):
+        """Main monitoring loop (single iteration)."""
         print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
 
-        while True:
-            try:
-                devices = self.get_block_devices()
-                found_dev = None
+        devices = self.get_block_devices()
+        found_dev = None
 
-                # Look for OpenSwim among all detected devices
-                for dev in devices:
-                    label = self.get_label(dev)
-                    if label == OPEN_SWIM_LABEL:
-                        found_dev = dev
-                        break
+        # Look for OpenSwim among all detected devices
+        for dev in devices:
+            label = self.get_label(dev)
+            if label == OPEN_SWIM_LABEL:
+                found_dev = dev
+                break
 
-                if found_dev and not self.connected:
-                    # Device plugged in
-                    if self.mount_device(found_dev):
-                        self.on_connected(found_dev)
-                        self.connected = True
-                        self.current_dev = found_dev
+        if found_dev and not self.connected:
+            # Device plugged in
+            if self.mount_device(found_dev):
+                self.on_connected(found_dev)
+                self.connected = True
+                self.current_dev = found_dev
 
-                if self.connected and (not found_dev):
-                    # Device unplugged
-                    self.unmount_device()
-                    self.on_disconnected()
-                    self.connected = False
-                    self.current_dev = None
+        if self.connected and (not found_dev):
+            # Device unplugged
+            self.unmount_device()
+            self.on_disconnected()
+            self.connected = False
+            self.current_dev = None
 
-                time.sleep(1)
-                
-            except KeyboardInterrupt:
-                print("\n[INFO] Stopping device monitor...")
-                if self.connected:
-                    self.unmount_device()
-                raise
-            except Exception as e:
-                print(f"[ERROR] Monitor loop error: {e}")
-                time.sleep(5)  # Wait longer on error
+        time.sleep(1)
