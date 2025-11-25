@@ -1,9 +1,7 @@
 import os
 import time
 import subprocess
-import json
-from typing import Optional
-import paho.mqtt.client as mqtt
+from typing import Optional, Callable
 
 OPEN_SWIM_LABEL = "OpenSwim"
 MOUNT_POINT = "/mnt/openswim"
@@ -11,8 +9,16 @@ MOUNT_POINT = "/mnt/openswim"
 class DeviceMonitor:
     """Monitor for OpenSwim MP3 player connection/disconnection."""
     
-    def __init__(self, mqtt_client: mqtt.Client):
-        self.mqtt_client = mqtt_client
+    def __init__(self, on_connected: Callable[[str, str], None], on_disconnected: Callable[[], None]):
+        """
+        Initialize device monitor with callbacks.
+        
+        Args:
+            on_connected: Callback when device connects (device_path, mount_point)
+            on_disconnected: Callback when device disconnects
+        """
+        self.on_connected_callback = on_connected
+        self.on_disconnected_callback = on_disconnected
         self.connected = False
         self.current_dev: Optional[str] = None
         
@@ -74,31 +80,15 @@ class DeviceMonitor:
         """Handle device connection event."""
         print(f"[EVENT] OpenSwim connected at {device} and mounted at {MOUNT_POINT}")
         
-        # Publish MQTT message
-        topic = "openswim/device/status"
-        payload = json.dumps({
-            "status": "connected",
-            "device": device,
-            "mount_point": MOUNT_POINT,
-            "timestamp": time.time()
-        })
-        
-        result = self.mqtt_client.publish(topic, payload, qos=1, retain=True)
-        print(f"[MQTT] Published connection event to {topic}")
+        # Call the callback
+        self.on_connected_callback(device, MOUNT_POINT)
 
     def on_disconnected(self):
         """Handle device disconnection event."""
         print("[EVENT] OpenSwim disconnected")
         
-        # Publish MQTT message
-        topic = "openswim/device/status"
-        payload = json.dumps({
-            "status": "disconnected",
-            "timestamp": time.time()
-        })
-        
-        result = self.mqtt_client.publish(topic, payload, qos=1, retain=True)
-        print(f"[MQTT] Published disconnection event to {topic}")
+        # Call the callback
+        self.on_disconnected_callback()
 
     def monitor_loop(self):
         """Main monitoring loop."""
