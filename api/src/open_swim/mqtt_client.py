@@ -2,59 +2,39 @@ import os
 import time
 from typing import Callable, Optional
 from dotenv import load_dotenv
+from typing import Any
 import paho.mqtt.client as mqtt
 
 
-class MQTTCallbacks:
-    """Callbacks for MQTT events."""
-    
-    def __init__(self):
-        self.on_connect_callback: Optional[Callable] = None
-        self.on_message_callback: Optional[Callable] = None
-        self.on_publish_callback: Optional[Callable] = None
-    
-    def set_on_connect(self, callback: Callable):
-        """Set callback for connection events."""
-        self.on_connect_callback = callback
-    
-    def set_on_message(self, callback: Callable):
-        """Set callback for message events."""
-        self.on_message_callback = callback
-    
-    def set_on_publish(self, callback: Callable):
-        """Set callback for publish events."""
-        self.on_publish_callback = callback
 
 
 class MQTTClient:
     """Manages MQTT connection and messaging."""
     
-    def __init__(self, callbacks: Optional[MQTTCallbacks] = None):
-        self.callbacks = callbacks or MQTTCallbacks()
+    def __init__(self, on_connect_callback: Callable[[], None], on_message_callback: Callable[[str, Any], None]):
         self.client: Optional[mqtt.Client] = None
         self.broker_host: Optional[str] = None
         self.broker_port: int = 1883
-        
+        self.on_connect_callback = on_connect_callback
+        self.on_message_callback = on_message_callback
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         """Internal callback when the client connects to the broker."""
         if rc == 0:
             print(f"Connected to MQTT broker successfully")
-            if self.callbacks.on_connect_callback:
-                self.callbacks.on_connect_callback(client, userdata, flags, rc, properties)
+            self.on_connect_callback()
+                
         else:
             print(f"Failed to connect, return code {rc}")
     
     def _on_message(self, client, userdata, msg):
         """Internal callback when a message is received."""
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
-        if self.callbacks.on_message_callback:
-            self.callbacks.on_message_callback(client, userdata, msg)
+        self.on_message_callback(msg.topic, msg.payload.decode())
+           
     
     def _on_publish(self, client, userdata, mid, reason_code=None, properties=None):
         """Internal callback when a message is published."""
         print(f"Message published with mid: {mid}")
-        if self.callbacks.on_publish_callback:
-            self.callbacks.on_publish_callback(client, userdata, mid, reason_code, properties)
     
     def connect(self, broker_uri: Optional[str] = None):
         """Connect to MQTT broker."""
