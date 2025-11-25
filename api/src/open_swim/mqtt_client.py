@@ -30,12 +30,7 @@ class MQTTClient:
         """Internal callback when a message is received."""
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
         self.on_message_callback(msg.topic, msg.payload.decode())
-           
-    
-    def _on_publish(self, client, userdata, mid, reason_code=None, properties=None):
-        """Internal callback when a message is published."""
-        print(f"Message published with mid: {mid}")
-    
+                   
     def loop_forever(self, broker_uri: Optional[str] = None):
         """Connect to MQTT broker."""
         # Load environment variables if not already loaded
@@ -64,7 +59,6 @@ class MQTTClient:
         # Set callbacks
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
-        self.client.on_publish = self._on_publish
         
         # Connect to broker
         self.client.connect(self.broker_host, self.broker_port, 60)

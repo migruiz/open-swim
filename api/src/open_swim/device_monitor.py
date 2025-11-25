@@ -112,7 +112,7 @@ class DeviceMonitor:
 
     def _monitor_loop(self):
         """Main monitoring loop (single iteration)."""
-        print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
+        #print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
 
         devices = self._get_block_devices()
         found_dev = None

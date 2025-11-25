@@ -26,7 +26,10 @@ def main() -> None:
         print(f"[MQTT] Message received on topic '{topic}': {message}")
         
     # Create MQTT client
-    mqtt_client = MQTTClient(on_connect_callback=on_mqtt_connected, on_message_callback=on_mqtt_message)
+    mqtt_client = MQTTClient(
+        on_connect_callback=on_mqtt_connected,
+        on_message_callback=on_mqtt_message
+    )
     
     
     # Define device event handlers that publish to MQTT
@@ -64,9 +67,11 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nShutting down...")
         mqtt_client.disconnect()
+        device_monitor.stop_monitoring()
     except Exception as e:
         print(f"Error: {e}")
         mqtt_client.disconnect()
+        device_monitor.stop_monitoring()
 
 if __name__ == "__main__":
     main()
