@@ -13,7 +13,7 @@ def main() -> None:
     def on_mqtt_connected():
         """Subscribe to test topic when connected."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        monitor.start_monitoring()
+        device_monitor.start_monitoring()
          # Publish a test message
         test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
@@ -53,7 +53,7 @@ def main() -> None:
         print(f"[MQTT] Published disconnection event to {topic}")
         
     # Start device monitor with callbacks
-    monitor = DeviceMonitor(
+    device_monitor = DeviceMonitor(
         on_connected=handle_device_connected,
         on_disconnected=handle_device_disconnected
     )

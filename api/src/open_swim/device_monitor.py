@@ -18,33 +18,35 @@ class DeviceMonitor:
             on_connected: Callback when device connects (device_path, mount_point)
             on_disconnected: Callback when device disconnects
         """
-        self.on_connected_callback = on_connected
-        self.on_disconnected_callback = on_disconnected
+        self.on_connected = on_connected
+        self.on_disconnected = on_disconnected
         self.connected = False
         self.current_dev: Optional[str] = None
         
-    def get_block_devices(self):
+    def _get_block_devices(self):
         """Returns a list of block devices like sda1, sdb1, etc."""
         devices = []
         try:
             for name in os.listdir("/dev"):
                 if name.startswith("sd") and name[-1].isdigit():
                     devices.append("/dev/" + name)
+            return devices
         except Exception as e:
             print(f"[ERROR] Failed to list devices: {e}")
-        return devices
+            raise e
 
-    def get_label(self, dev: str) -> Optional[str]:
+    def _get_label(self, dev: str) -> Optional[str]:
         """Returns filesystem label of a device or None."""
         try:
             output = subprocess.check_output(["blkid", dev]).decode()
             for part in output.split():
                 if part.startswith("LABEL=") or part.startswith("LABEL_FATBOOT="):
                     return part.split("=")[1].strip('"')
-        except Exception:
-            return None
+        except Exception as e:
+            print(f"[ERROR] Failed to get label for {dev}: {e}")
+            raise e
 
-    def mount_device(self, dev: str) -> bool:
+    def _mount_device(self, dev: str) -> bool:
         """Mount the device and return success status."""
         try:
             print(f"[INFO] Mounting {dev} at {MOUNT_POINT}...")
@@ -59,9 +61,9 @@ class DeviceMonitor:
                 return False
         except Exception as e:
             print(f"[ERROR] Mount exception: {e}")
-            return False
+            raise e
 
-    def unmount_device(self) -> bool:
+    def _unmount_device(self) -> bool:
         """Unmount the device and return success status."""
         try:
             print(f"[INFO] Unmounting {MOUNT_POINT}...")
@@ -75,21 +77,10 @@ class DeviceMonitor:
                 return True  # Don't treat this as fatal
         except Exception as e:
             print(f"[ERROR] Unmount exception: {e}")
-            return False
+            raise e
 
-    def on_connected(self, device: str):
-        """Handle device connection event."""
-        print(f"[EVENT] OpenSwim connected at {device} and mounted at {MOUNT_POINT}")
-        
-        # Call the callback
-        self.on_connected_callback(device, MOUNT_POINT)
 
-    def on_disconnected(self):
-        """Handle device disconnection event."""
-        print("[EVENT] OpenSwim disconnected")
-        
-        # Call the callback
-        self.on_disconnected_callback()
+
 
     def start_monitoring(self):
         """Start the monitoring loop in a background thread."""
@@ -112,34 +103,39 @@ class DeviceMonitor:
     def _monitor_loop_background(self):
         """Background thread target for monitoring loop."""
         while not self._stop_event.is_set():
-            self._monitor_loop()
+            try:
+                self._monitor_loop()
+                time.sleep(1)
+            except Exception as e:
+                print(f"[ERROR] Exception in monitor loop: {e}")
+                time.sleep(3)
 
     def _monitor_loop(self):
         """Main monitoring loop (single iteration)."""
         print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
 
-        devices = self.get_block_devices()
+        devices = self._get_block_devices()
         found_dev = None
 
         # Look for OpenSwim among all detected devices
         for dev in devices:
-            label = self.get_label(dev)
+            label = self._get_label(dev)
             if label == OPEN_SWIM_LABEL:
                 found_dev = dev
                 break
 
         if found_dev and not self.connected:
             # Device plugged in
-            if self.mount_device(found_dev):
-                self.on_connected(found_dev)
+            if self._mount_device(found_dev):                
                 self.connected = True
                 self.current_dev = found_dev
+                self.on_connected(found_dev, MOUNT_POINT)
 
         if self.connected and (not found_dev):
             # Device unplugged
-            self.unmount_device()
-            self.on_disconnected()
+            self._unmount_device()           
             self.connected = False
             self.current_dev = None
+            self.on_disconnected()
 
-        time.sleep(1)
+        
