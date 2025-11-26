@@ -3,6 +3,7 @@ import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
+from open_swim.mp3_downloader import download_mp3
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
@@ -22,13 +23,16 @@ def main() -> None:
         print(f"Publishing message to topic '{test_topic}': {test_message}")
 
         # Extract playlist details and publish them
-        
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
         playlist_details = extract_playlist(playlist_url)
         print("[Playlist Extractor] Playlist details:")
         print(json.dumps(playlist_details, indent=2))
-        # Publish playlist details to MQTT
         mqtt_client.publish("openswim/playlist/details", json.dumps(playlist_details), qos=1, retain=False)
+
+        video_id = "5Bym0ffALaU"
+        mp3_info = download_mp3(video_id)
+        print("[MP3 Downloader] MP3 download info:")
+        print(json.dumps(mp3_info, indent=2))
     
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
