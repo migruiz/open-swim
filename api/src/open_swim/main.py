@@ -2,7 +2,7 @@ import json
 import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-
+from open_swim.playlist_extractor import extract_playlist
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
@@ -11,15 +11,24 @@ def main() -> None:
     
     # Set up MQTT connection callback
     def on_mqtt_connected():
-        """Subscribe to test topic when connected."""
+        """Subscribe to test topic when connected. Also extract and publish playlist details."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
         device_monitor.start_monitoring()
-         # Publish a test message
+        # Publish a test message
         test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
         mqtt_client.subscribe("test/topic")
         mqtt_client.publish(test_topic, test_message)
         print(f"Publishing message to topic '{test_topic}': {test_message}")
+
+        # Extract playlist details and publish them
+        
+        playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
+        playlist_details = extract_playlist(playlist_url)
+        print("[Playlist Extractor] Playlist details:")
+        print(json.dumps(playlist_details, indent=2))
+        # Publish playlist details to MQTT
+        mqtt_client.publish("openswim/playlist/details", json.dumps(playlist_details), qos=1, retain=False)
     
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
