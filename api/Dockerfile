@@ -22,7 +22,7 @@ COPY src ./src
 
 # Install the project package
 RUN uv pip install --system --no-cache --no-deps .
-RUN uv pip install --no-cache-dir yt-dlp
+
 
 # Stage 2: Runtime image
 FROM --platform=$TARGETPLATFORM python:3.12-slim AS runtime
@@ -44,6 +44,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     util-linux \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir yt-dlp
 
 # Create mount point directory
 RUN mkdir -p /mnt/openswim
