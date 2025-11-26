@@ -22,6 +22,7 @@ COPY src ./src
 
 # Install the project package
 RUN uv pip install --system --no-cache --no-deps .
+RUN uv pip install --no-cache-dir yt-dlp
 
 # Stage 2: Runtime image
 FROM --platform=$TARGETPLATFORM python:3.12-slim AS runtime
