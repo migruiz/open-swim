@@ -26,8 +26,8 @@ def main() -> None:
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
         playlist_details = extract_playlist(playlist_url)        
         print("[Playlist Extractor] Playlist details:")
-        print(json.dumps(playlist_details, indent=2))
-        mqtt_client.publish("openswim/playlist/details", json.dumps(playlist_details), qos=1, retain=False)
+        print(playlist_details.model_dump_json(indent=2))
+        mqtt_client.publish("openswim/playlist/details", playlist_details.model_dump_json(), qos=1, retain=False)
 
         video_id = "5Bym0ffALaU"
         mp3_info = download_mp3(video_id)

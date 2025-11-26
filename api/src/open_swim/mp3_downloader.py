@@ -4,9 +4,17 @@ import secrets
 import re
 from typing import Dict, Any
 from pathlib import Path
+from pydantic import BaseModel
 
 
-def download_mp3(video_id: str, output_dir: str = None) -> Dict[str, Any]:
+class DownloadedMP3(BaseModel):
+    file_path: str
+    title: str
+    video_id: str
+    file_size: int
+
+
+def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
     """
     Download a YouTube video as MP3 using yt-dlp.
     
@@ -15,11 +23,7 @@ def download_mp3(video_id: str, output_dir: str = None) -> Dict[str, Any]:
         output_dir: Directory to save the MP3 file (default: /tmp on Linux/Mac, temp dir on Windows)
         
     Returns:
-        Dict containing:
-        - 'file_path': Full path to the downloaded MP3 file
-        - 'title': Video title (sanitized)
-        - 'video_id': The video ID
-        - 'file_size': Size of the file in bytes
+        DownloadedMP3 object containing file_path, title, video_id, and file_size
         
     Raises:
         ValueError: If video_id is empty
@@ -88,12 +92,12 @@ def download_mp3(video_id: str, output_dir: str = None) -> Dict[str, Any]:
         # Get file size
         file_size = os.path.getsize(output_path)
         
-        return {
-            'file_path': output_path,
-            'title': title,
-            'video_id': video_id,
-            'file_size': file_size
-        }
+        return DownloadedMP3(
+            file_path=output_path,
+            title=title,
+            video_id=video_id,
+            file_size=file_size
+        )
         
     except subprocess.TimeoutExpired:
         # Clean up partial download if exists
