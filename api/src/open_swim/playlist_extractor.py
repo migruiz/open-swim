@@ -1,12 +1,11 @@
 import subprocess
 import json
 from typing import Dict, List, Any, Optional
-
+from pydantic import BaseModel
 
 from dataclasses import dataclass
 
-@dataclass
-class PlaylistVideo:
+class PlaylistVideo(BaseModel):
     id: str
     title: str
     url: str

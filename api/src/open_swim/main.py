@@ -26,13 +26,13 @@ def main() -> None:
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
         playlist_details = extract_playlist(playlist_url)        
         print("[Playlist Extractor] Playlist details:")
-        print(playlist_details.model_dump_json(indent=2))
-        mqtt_client.publish("openswim/playlist/details", playlist_details.model_dump_json(), qos=1, retain=False)
+        print(playlist_details.model_dump_json())
+        mqtt_client.publish("openswim/playlist/details", playlist_details, qos=1, retain=False)
 
         video_id = "5Bym0ffALaU"
         mp3_info = download_mp3(video_id)
         print("[MP3 Downloader] MP3 download info:")
-        print(json.dumps(mp3_info, indent=2))
+        print(json.dumps(mp3_info.model_dump(), indent=2))
     
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
