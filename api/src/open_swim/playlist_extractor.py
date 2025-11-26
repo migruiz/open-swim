@@ -3,12 +3,22 @@ import json
 from typing import Dict, List, Any, Optional
 
 
-def extract_playlist(playlist_url: str) -> Dict[str, Any]:
+from dataclasses import dataclass
+
+@dataclass
+class PlaylistVideo:
+    id: str
+    title: str
+    url: str
+    thumbnail: str
+    duration: str
+
+def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
     """
     Extract playlist information from a YouTube playlist URL using yt-dlp.
     Raises ValueError or RuntimeError on error.
     Returns:
-        Dict with 'videos': List of video information dictionaries
+        List of PlaylistVideo objects
     """
     # Validate input
     if not playlist_url:
@@ -42,29 +52,24 @@ def extract_playlist(playlist_url: str) -> Dict[str, Any]:
             raise RuntimeError('Failed to fetch playlist information')
 
         # Parse JSON output (each line is a separate JSON object)
-        videos: List[Dict[str, str]] = []
+        videos: List[PlaylistVideo] = []
+
 
         for line in stdout.strip().split('\n'):
             line = line.strip()
             if not line:
                 continue
-
-        
             data = json.loads(line)
+            video = PlaylistVideo(
+                id=data.get('id', ''),
+                title=data.get('title', 'Unknown Title'),
+                url=data.get('url', f"https://www.youtube.com/watch?v={data.get('id', '')}"),
+                thumbnail=data.get('thumbnail', '') or (data.get('thumbnails', [{}])[0].get('url', '') if data.get('thumbnails') else ''),
+                duration=data.get('duration_string', 'Unknown')
+            )
+            videos.append(video)
 
-            video_info = {
-                'id': data.get('id', ''),
-                'title': data.get('title', 'Unknown Title'),
-                'url': data.get('url', f"https://www.youtube.com/watch?v={data.get('id', '')}"),
-                'thumbnail': data.get('thumbnail', '') or (data.get('thumbnails', [{}])[0].get('url', '') if data.get('thumbnails') else ''),
-                'duration': data.get('duration_string', 'Unknown')
-            }
-
-            videos.append(video_info)
-
-
-
-        return {'videos': videos}
+        return videos
 
     except subprocess.TimeoutExpired:
         raise RuntimeError('Request timeout while fetching playlist')
