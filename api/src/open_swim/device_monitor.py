@@ -1,16 +1,29 @@
 import os
 import time
 import subprocess
-from typing import Optional, Callable
+from typing import Optional, Protocol
 import threading
 
 OPEN_SWIM_LABEL = "OpenSwim"
 MOUNT_POINT = "/mnt/openswim"
 
+
+class DeviceConnectedCallback(Protocol):
+    """Protocol for device connected callback."""
+    def __call__(self, device: str, mount_point: str) -> None:
+        ...
+
+
+class DeviceDisconnectedCallback(Protocol):
+    """Protocol for device disconnected callback."""
+    def __call__(self) -> None:
+        ...
+
+
 class DeviceMonitor:
     """Monitor for OpenSwim MP3 player connection/disconnection."""
     
-    def __init__(self, on_connected: Callable[[str, str], None], on_disconnected: Callable[[], None]):
+    def __init__(self, on_connected: DeviceConnectedCallback, on_disconnected: DeviceDisconnectedCallback):
         """
         Initialize device monitor with callbacks.
         
@@ -129,7 +142,7 @@ class DeviceMonitor:
             if self._mount_device(found_dev):                
                 self.connected = True
                 self.current_dev = found_dev
-                self.on_connected(found_dev, MOUNT_POINT)
+                self.on_connected(device=found_dev, mount_point=MOUNT_POINT)
 
         if self.connected and (not found_dev):
             # Device unplugged

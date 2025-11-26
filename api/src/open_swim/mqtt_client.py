@@ -1,17 +1,26 @@
 import os
 import time
-from typing import Callable, Optional
+from typing import Optional, Any, Protocol
 from dotenv import load_dotenv
-from typing import Any
 import paho.mqtt.client as mqtt
 
 
+class ConnectCallback(Protocol):
+    """Protocol for MQTT connect callback."""
+    def __call__(self) -> None:
+        ...
+
+
+class MessageCallback(Protocol):
+    """Protocol for MQTT message callback."""
+    def __call__(self, topic: str, message: Any) -> None:
+        ...
 
 
 class MQTTClient:
     """Manages MQTT connection and messaging."""
     
-    def __init__(self, on_connect_callback: Callable[[], None], on_message_callback: Callable[[str, Any], None]):
+    def __init__(self, on_connect_callback: ConnectCallback, on_message_callback: MessageCallback):
         self.client: Optional[mqtt.Client] = None
         self.broker_host: Optional[str] = None
         self.broker_port: int = 1883
@@ -29,7 +38,7 @@ class MQTTClient:
     def _on_message(self, client, userdata, msg):
         """Internal callback when a message is received."""
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
-        self.on_message_callback(msg.topic, msg.payload.decode())
+        self.on_message_callback(topic=msg.topic, message=msg.payload.decode())
                    
     def loop_forever(self, broker_uri: Optional[str] = None):
         """Connect to MQTT broker."""
