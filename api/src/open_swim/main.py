@@ -4,6 +4,8 @@ from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
 from open_swim.mp3_downloader import download_mp3
+import shutil
+import os
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
@@ -24,7 +26,25 @@ def main() -> None:
 
         # Extract playlist details and publish them
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
-        playlist_details = extract_playlist(playlist_url)
+        playlist_videos = extract_playlist(playlist_url)
+        for video in playlist_videos:
+            print(f"[Playlist Item] Title: {video.title}, Video ID: {video.video_id}")
+            mp3_info = download_mp3(video.video_id)
+            # Ensure /library/ directory exists 
+            library_dir = "/library/"
+            os.makedirs(library_dir, exist_ok=True)
+
+            # Copy the downloaded MP3 file to /library/
+            destination_path = os.path.join(library_dir, os.path.basename(mp3_info.file_path))
+            shutil.copy2(mp3_info.file_path, destination_path)
+            print(f"[File Copy] Copied MP3 to {destination_path}")
+
+            print(f"[MP3 Downloader] Downloaded MP3 for video ID {video.video_id}: {mp3_info.file_path}")   
+        
+                
+        
+        
+        
         # playlist_details is a list of Pydantic objects; get their JSON representation
         playlist_details_json = json.dumps([item.model_dump() for item in playlist_details], indent=2)
         print("[Playlist Extractor] Playlist details:")
@@ -32,7 +52,7 @@ def main() -> None:
         mqtt_client.publish("openswim/playlist/details", playlist_details_json, qos=1, retain=False)
 
         video_id = "5rTwOt9Qgik"
-        mp3_info = download_mp3(video_id)
+        
         # mp3_info is a Pydantic object; get its JSON representation
         mp3_info_json = mp3_info.model_dump_json(indent=2)
         print("[MP3 Downloader] MP3 download info:")
