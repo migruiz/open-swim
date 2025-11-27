@@ -14,7 +14,7 @@ class DownloadedMP3(BaseModel):
     file_size: int
 
 
-def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
+def download_mp3(video_id: str) -> DownloadedMP3:
     """
     Download a YouTube video as MP3 using yt-dlp.
     
@@ -36,8 +36,8 @@ def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     
     # Set output directory
-    if output_dir is None:
-        output_dir = '/tmp' if os.name != 'nt' else os.environ.get('TEMP', '.')
+    output_dir = '/tmp' if os.name != 'nt' else os.environ.get('TEMP', '.')
+        
     
     # Generate random temp filename
     temp_filename = f"{secrets.token_hex(16)}.mp3"

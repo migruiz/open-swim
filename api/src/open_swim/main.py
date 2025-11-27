@@ -7,18 +7,15 @@ from open_swim.mp3_downloader import download_mp3
 from open_swim.library_info import load_library_info, save_file_to_library, add_mp3_to_library_info
 
 
-
-
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
-    
 
-    
     # Set up MQTT connection callback
+
     def on_mqtt_connected():
         """Subscribe to test topic when connected. Also extract and publish playlist details."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        device_monitor.start_monitoring()
+        #device_monitor.start_monitoring()
         # Publish a test message
         test_topic = "test/topic"
         test_message = "Hello from Open Swim!"
@@ -28,54 +25,34 @@ def main() -> None:
 
         # Extract playlist details and publish them
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
-        playlist_videos = extract_playlist(playlist_url)
-        for video in playlist_videos:
-            print(f"[Playlist Item] Title: {video.title}, Video ID: {video.video_id}")
-
+        playlist_videos = extract_playlist(playlist_url)        
+        for video in playlist_videos:            
             library_info = load_library_info()
             if library_info.videos.get(video.video_id):
                 print(f"[Library Info] Video ID {video.video_id} already in library.")
                 continue
-            else:            
-                downloaded_mp3_info = download_mp3(video.video_id)
-                mp3_file_library_path = save_file_to_library(downloaded_mp3_info)
+            else:
+                downloaded_mp3_info = download_mp3(video_id=video.video_id)
+                mp3_file_library_path = save_file_to_library(
+                    mp3_info=downloaded_mp3_info)
                 add_mp3_to_library_info(
                     library_info=library_info,
                     mp3_info=downloaded_mp3_info,
                     file_path=mp3_file_library_path
                 )
-                
-  
-        
-                
-        
-        
-        
-        # playlist_details is a list of Pydantic objects; get their JSON representation
-        playlist_details_json = json.dumps([item.model_dump() for item in playlist_details], indent=2)
-        print("[Playlist Extractor] Playlist details:")
-        print(playlist_details_json)
-        mqtt_client.publish("openswim/playlist/details", playlist_details_json, qos=1, retain=False)
 
-        video_id = "5rTwOt9Qgik"
-        
-        # mp3_info is a Pydantic object; get its JSON representation
-        mp3_info_json = mp3_info.model_dump_json(indent=2)
-        print("[MP3 Downloader] MP3 download info:")
-        print(mp3_info_json)
-    
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
         print(f"[MQTT] Message received on topic '{topic}': {message}")
-        
+
     # Create MQTT client
     mqtt_client = MQTTClient(
         on_connect_callback=on_mqtt_connected,
         on_message_callback=on_mqtt_message
     )
-    
-    
+
     # Define device event handlers that publish to MQTT
+
     def handle_device_connected(device: str, mount_point: str):
         """Handle device connection - publish to MQTT."""
         topic = "openswim/device/status"
@@ -87,7 +64,7 @@ def main() -> None:
         })
         mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published connection event to {topic}")
-    
+
     def handle_device_disconnected():
         """Handle device disconnection - publish to MQTT."""
         topic = "openswim/device/status"
@@ -97,16 +74,16 @@ def main() -> None:
         })
         mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published disconnection event to {topic}")
-        
+
     # Start device monitor with callbacks
     device_monitor = DeviceMonitor(
         on_connected=handle_device_connected,
         on_disconnected=handle_device_disconnected
     )
-    
+
     try:
         mqtt_client.loop_forever()
-            
+
     except KeyboardInterrupt:
         print("\nShutting down...")
         mqtt_client.disconnect()
@@ -115,6 +92,7 @@ def main() -> None:
         print(f"Error: {e}")
         mqtt_client.disconnect()
         device_monitor.stop_monitoring()
+
 
 if __name__ == "__main__":
     main()
