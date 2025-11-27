@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 class DownloadedMP3(BaseModel):
     file_path: str
-    title: str
     video_id: str
     file_size: int
 

@@ -18,3 +18,22 @@ open-swim = "open_swim.main:main"
 [tool.uv]
 # uv-specific configuration (optional tweaks)
 package = true
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+]

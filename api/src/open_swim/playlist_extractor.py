@@ -12,7 +12,7 @@ class PlaylistVideo(BaseModel):
     title: str
     url: str
     thumbnail: str
-    duration: str
+    duration: int
 
 def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
     """
@@ -67,7 +67,7 @@ def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
                 title=data.get('title', 'Unknown Title'),
                 url=data.get('url', f"https://www.youtube.com/watch?v={data.get('id', '')}"),
                 thumbnail=data.get('thumbnail', '') or (data.get('thumbnails', [{}])[0].get('url', '') if data.get('thumbnails') else ''),
-                duration=data.get('duration_string', 'Unknown')
+                duration=data.get('duration', 0)
             )
             videos.append(video)
 
