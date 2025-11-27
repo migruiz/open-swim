@@ -7,14 +7,14 @@ from pydantic import BaseModel
 
 from dataclasses import dataclass
 
-class PlaylistVideo(BaseModel):
+class YoutubeVideo(BaseModel):
     id: str
     title: str
     url: str
     thumbnail: str
     duration: int
 
-def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
+def extract_playlist(playlist_url: str) -> List[YoutubeVideo]:
     """
     Extract playlist information from a YouTube playlist URL using yt-dlp.
     Raises ValueError or RuntimeError on error.
@@ -54,7 +54,7 @@ def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
             raise RuntimeError('Failed to fetch playlist information')
 
         # Parse JSON output (each line is a separate JSON object)
-        videos: List[PlaylistVideo] = []
+        videos: List[YoutubeVideo] = []
 
 
         for line in stdout.strip().split('\n'):
@@ -62,7 +62,7 @@ def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
             if not line:
                 continue
             data = json.loads(line)
-            video = PlaylistVideo(
+            video = YoutubeVideo(
                 id=data.get('id', ''),
                 title=data.get('title', 'Unknown Title'),
                 url=data.get('url', f"https://www.youtube.com/watch?v={data.get('id', '')}"),
