@@ -38,9 +38,9 @@ def main() -> None:
                 mp3_file_library_path = save_file_to_library(
                     mp3_info=downloaded_mp3_info)
                 add_mp3_to_library_info(
-                    library_info=library_info,
-                    mp3_info=downloaded_mp3_info,
-                    file_path=mp3_file_library_path
+                    library_data=library_info,
+                    downloaded_mp3_info=downloaded_mp3_info,
+                    mp3_file_library_path=mp3_file_library_path
                 )
 
     def on_mqtt_message(topic: str, message: str):
