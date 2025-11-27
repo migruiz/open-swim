@@ -1,7 +1,6 @@
 import os
 import time
 from typing import Optional, Any, Protocol
-from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 
 
@@ -42,9 +41,6 @@ class MQTTClient:
                    
     def loop_forever(self, broker_uri: Optional[str] = None):
         """Connect to MQTT broker."""
-        # Load environment variables if not already loaded
-        load_dotenv()
-        
         # Get broker URI from parameter or environment
         if not broker_uri:
             broker_uri = os.getenv("MQTT_BROKER_URI")

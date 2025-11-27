@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
+
 class DownloadedMP3(BaseModel):
     file_path: str
     title: str
@@ -46,7 +47,8 @@ def download_mp3(video_id: str) -> DownloadedMP3:
     
     try:
         # Download and convert to MP3 using yt-dlp
-        yt_dlp_cmd = 'C:\\Users\\miguelpc\\Downloads\\yt-dlp.exe' if sys.gettrace() is not None else 'yt-dlp'
+        # Use environment variable if set, otherwise default to 'yt-dlp' in PATH
+        yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
         command = [
             yt_dlp_cmd,
             '-x',

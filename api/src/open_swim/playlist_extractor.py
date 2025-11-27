@@ -1,3 +1,4 @@
+import os
 import subprocess
 import json
 import sys
@@ -35,8 +36,7 @@ def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
 
     try:
         # Execute yt-dlp command
-        # Use yt-dlp.exe when debugging on Windows, otherwise use yt-dlp
-        yt_dlp_cmd = 'C:\\Users\\miguelpc\\Downloads\\yt-dlp.exe' if sys.gettrace() is not None else 'yt-dlp'
+        yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
         command = [yt_dlp_cmd, '--flat-playlist', '--dump-json', playlist_url]
 
         result = subprocess.run(

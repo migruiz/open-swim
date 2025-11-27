@@ -5,7 +5,9 @@ from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
 from open_swim.mp3_downloader import download_mp3
 from open_swim.library_info import load_library_info, save_file_to_library, add_mp3_to_library_info
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
