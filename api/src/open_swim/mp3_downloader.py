@@ -2,6 +2,7 @@ import subprocess
 import os
 import secrets
 import re
+import sys
 from typing import Dict, Any
 from pathlib import Path
 from pydantic import BaseModel
@@ -45,8 +46,9 @@ def download_mp3(video_id: str) -> DownloadedMP3:
     
     try:
         # Download and convert to MP3 using yt-dlp
+        yt_dlp_cmd = 'C:\\Users\\miguelpc\\Downloads\\yt-dlp.exe' if sys.gettrace() is not None else 'yt-dlp'
         command = [
-            'yt-dlp',
+            yt_dlp_cmd,
             '-x',
             '--audio-format', 'mp3',
             '--audio-quality', '0',
@@ -74,7 +76,7 @@ def download_mp3(video_id: str) -> DownloadedMP3:
         # Get video title for metadata
         title = video_id
         try:
-            title_command = ['yt-dlp', '--get-title', video_url]
+            title_command = [yt_dlp_cmd, '--get-title', video_url]
             title_result = subprocess.run(
                 title_command,
                 capture_output=True,

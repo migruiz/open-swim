@@ -24,15 +24,15 @@ def main() -> None:
         print(f"Publishing message to topic '{test_topic}': {test_message}")
 
         # Extract playlist details and publish them
-        playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
+        playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
         playlist_videos = extract_playlist(playlist_url)        
         for video in playlist_videos:            
             library_info = load_library_info()
-            if library_info.videos.get(video.video_id):
-                print(f"[Library Info] Video ID {video.video_id} already in library.")
+            if library_info.videos.get(video.id):
+                print(f"[Library Info] Video ID {video.id} already in library.")
                 continue
             else:
-                downloaded_mp3_info = download_mp3(video_id=video.video_id)
+                downloaded_mp3_info = download_mp3(video_id=video.id)
                 mp3_file_library_path = save_file_to_library(
                     mp3_info=downloaded_mp3_info)
                 add_mp3_to_library_info(
