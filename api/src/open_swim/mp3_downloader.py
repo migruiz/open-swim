@@ -74,30 +74,13 @@ def download_mp3(video_id: str) -> DownloadedMP3:
         if not os.path.exists(output_path):
             raise RuntimeError("Downloaded file not found")
         
-        # Get video title for metadata
-        title = video_id
-        try:
-            title_command = [yt_dlp_cmd, '--get-title', video_url]
-            title_result = subprocess.run(
-                title_command,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if title_result.returncode == 0 and title_result.stdout:
-                # Sanitize title (keep only alphanumeric and underscores)
-                raw_title = title_result.stdout.strip()
-                title = re.sub(r'[^a-z0-9]', '_', raw_title, flags=re.IGNORECASE)[:100]
-        except Exception as e:
-            print(f"Failed to get video title: {e}")
+
         
         # Get file size
         file_size = os.path.getsize(output_path)
         
         return DownloadedMP3(
             file_path=output_path,
-            title=title,
             video_id=video_id,
             file_size=file_size
         )
