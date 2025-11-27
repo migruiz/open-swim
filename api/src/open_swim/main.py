@@ -4,8 +4,10 @@ from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
 from open_swim.mp3_downloader import download_mp3
-import shutil
-import os
+from open_swim.library_info import load_library_info, save_file_to_library, add_mp3_to_library_info
+
+
+
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
@@ -29,17 +31,21 @@ def main() -> None:
         playlist_videos = extract_playlist(playlist_url)
         for video in playlist_videos:
             print(f"[Playlist Item] Title: {video.title}, Video ID: {video.video_id}")
-            mp3_info = download_mp3(video.video_id)
-            # Ensure /library/ directory exists 
-            library_dir = "/library/"
-            os.makedirs(library_dir, exist_ok=True)
 
-            # Copy the downloaded MP3 file to /library/
-            destination_path = os.path.join(library_dir, os.path.basename(mp3_info.file_path))
-            shutil.copy2(mp3_info.file_path, destination_path)
-            print(f"[File Copy] Copied MP3 to {destination_path}")
-
-            print(f"[MP3 Downloader] Downloaded MP3 for video ID {video.video_id}: {mp3_info.file_path}")   
+            library_info = load_library_info()
+            if library_info.videos.get(video.video_id):
+                print(f"[Library Info] Video ID {video.video_id} already in library.")
+                continue
+            else:            
+                downloaded_mp3_info = download_mp3(video.video_id)
+                mp3_file_library_path = save_file_to_library(downloaded_mp3_info)
+                add_mp3_to_library_info(
+                    library_info=library_info,
+                    mp3_info=downloaded_mp3_info,
+                    file_path=mp3_file_library_path
+                )
+                
+  
         
                 
         
