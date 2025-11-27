@@ -1,5 +1,6 @@
 import subprocess
 import json
+import sys
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 
@@ -34,7 +35,9 @@ def extract_playlist(playlist_url: str) -> List[PlaylistVideo]:
 
     try:
         # Execute yt-dlp command
-        command = ['yt-dlp', '--flat-playlist', '--dump-json', playlist_url]
+        # Use yt-dlp.exe when debugging on Windows, otherwise use yt-dlp
+        yt_dlp_cmd = 'C:\\Users\\miguelpc\\Downloads\\yt-dlp.exe' if sys.gettrace() is not None else 'yt-dlp'
+        command = [yt_dlp_cmd, '--flat-playlist', '--dump-json', playlist_url]
 
         result = subprocess.run(
             command,
