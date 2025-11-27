@@ -17,13 +17,7 @@ def main() -> None:
     def on_mqtt_connected():
         """Subscribe to test topic when connected. Also extract and publish playlist details."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        #device_monitor.start_monitoring()
-        # Publish a test message
-        test_topic = "test/topic"
-        test_message = "Hello from Open Swim!"
         mqtt_client.subscribe("test/topic")
-        mqtt_client.publish(test_topic, test_message)
-        print(f"Publishing message to topic '{test_topic}': {test_message}")
 
         # Extract playlist details and publish them
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
@@ -42,6 +36,7 @@ def main() -> None:
                     downloaded_mp3_info=downloaded_mp3_info,
                     mp3_file_library_path=mp3_file_library_path
                 )
+        print(f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
 
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
