@@ -24,15 +24,19 @@ def main() -> None:
 
         # Extract playlist details and publish them
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
-        playlist_details = extract_playlist(playlist_url)        
+        playlist_details = extract_playlist(playlist_url)
+        # playlist_details is a list of Pydantic objects; get their JSON representation
+        playlist_details_json = json.dumps([item.model_dump() for item in playlist_details], indent=2)
         print("[Playlist Extractor] Playlist details:")
-        print(playlist_details.model_dump_json())
-        mqtt_client.publish("openswim/playlist/details", playlist_details, qos=1, retain=False)
+        print(playlist_details_json)
+        mqtt_client.publish("openswim/playlist/details", playlist_details_json, qos=1, retain=False)
 
-        video_id = "5Bym0ffALaU"
+        video_id = "5rTwOt9Qgik"
         mp3_info = download_mp3(video_id)
+        # mp3_info is a Pydantic object; get its JSON representation
+        mp3_info_json = mp3_info.model_dump_json(indent=2)
         print("[MP3 Downloader] MP3 download info:")
-        print(json.dumps(mp3_info.model_dump(), indent=2))
+        print(mp3_info_json)
     
     def on_mqtt_message(topic: str, message: str):
         """Handle incoming MQTT messages."""
