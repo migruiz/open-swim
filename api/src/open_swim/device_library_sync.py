@@ -1,14 +1,16 @@
 
 
 import os
+import re
 import shutil
 from typing import List
-from open_swim.library_info import LibraryData
+from open_swim.library_info import load_library_info
 from open_swim.playlist_extractor import PlaylistInfo
 
 
-def sync_with_device(library_info: LibraryData, play_lists: List[PlaylistInfo]) -> None:
+def sync_with_device(play_lists: List[PlaylistInfo]) -> None:
     """Sync the music library with the connected device."""
+    library_info = load_library_info()
     device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
     
     if not device_sdcard_path:
@@ -23,7 +25,9 @@ def sync_with_device(library_info: LibraryData, play_lists: List[PlaylistInfo]) 
     
     # Iterate through each playlist
     for playlist in play_lists:
-        playlist_title = playlist.title
+        # Sanitize playlist title to remove special characters
+        playlist_title = re.sub(r'[<>:"/\\|?*]', '_', playlist.title)
+        playlist_title = playlist_title.strip()
         playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
         
         print(f"[Device Sync] Processing playlist: {playlist_title}")

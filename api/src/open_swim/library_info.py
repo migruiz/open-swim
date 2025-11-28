@@ -32,11 +32,11 @@ class LibraryData(BaseModel):
 
 
 def get_library_video_info(video_id: str) -> LibraryMp3Info | None:
-    library_data = _load_library_info()
+    library_data = load_library_info()
     return library_data.videos.get(video_id)
 
 
-def _load_library_info() -> LibraryData:
+def load_library_info() -> LibraryData:
     info_json_path = os.path.join(LIBRARY_PATH, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
@@ -102,7 +102,7 @@ def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3
         original_mp3_path=original_mp3_file_library_path,
         original_mp3_downloaded=True
     )
-    library_data = _load_library_info()
+    library_data = load_library_info()
     library_data.videos[youtube_video.id] = video_info
     _save_library_info(library_data)
     return original_mp3_file_library_path
@@ -114,6 +114,6 @@ def add_normalized_mp3_to_library(youtube_video: YoutubeVideo, temp_normalized_m
     assert video_info is not None, f"Video {youtube_video.id} must exist in library before adding normalized MP3"
     video_info.normalized_mp3_path = normalized_mp3_file_library_path
     video_info.normalized_mp3_converted = True
-    library_data = _load_library_info()
+    library_data = load_library_info()
     library_data.videos[youtube_video.id] = video_info
     _save_library_info(library_data)
