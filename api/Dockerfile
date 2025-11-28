@@ -30,7 +30,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
 # Copy dependency files and install project dependencies
-COPY pyproject.toml README.md ./
+COPY pyproject.toml ./
 # COPY uv.lock ./  # uncomment when lock file is added
 
 RUN uv pip install --system --no-cache .
