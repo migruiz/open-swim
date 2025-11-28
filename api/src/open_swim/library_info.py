@@ -50,6 +50,12 @@ def _save_file_to_library(mp3_info: DownloadedMP3) -> str:
     print(f"[MP3 Downloader] Downloaded MP3 for video ID {mp3_info.video_id}: {mp3_info.file_path}") 
     return destination_path
 
+def _save_library_info(library_data: LibraryData) -> None:
+    info_json_path = os.path.join(LIBRARY_PATH, "info.json")
+    with open(info_json_path, "w", encoding="utf-8") as f:
+        json.dump(library_data.model_dump(), f, indent=2)
+    print(f"[Info JSON] Saved library info to {info_json_path}")
+
 def add_mp3_to_library(youtube_video: YoutubeVideo, downloaded_mp3: DownloadedMP3) -> None:
     mp3_file_library_path = _save_file_to_library(downloaded_mp3)
     video_info = LibraryMp3Info(
@@ -60,7 +66,4 @@ def add_mp3_to_library(youtube_video: YoutubeVideo, downloaded_mp3: DownloadedMP
     )
     library_data = _load_library_info()
     library_data.videos[downloaded_mp3.video_id] = video_info
-    info_json_path = os.path.join(LIBRARY_PATH, "info.json")
-    with open(info_json_path, "w", encoding="utf-8") as f:
-        json.dump(library_data.model_dump(), f, indent=2)
-    print(f"[Info JSON] Saved library info to {info_json_path}")
+    _save_library_info(library_data)
