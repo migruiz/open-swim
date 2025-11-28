@@ -25,6 +25,7 @@ def get_normalized_loudness_file(mp3_file_path: str) -> str:
     output_path = os.path.join(output_dir, temp_filename)
     
     # Build ffmpeg command with loudnorm filter and 128k bitrate
+    print(f"Normalizing loudness for file: {mp3_file_path}")
     ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
         ffmpeg_cmd,
