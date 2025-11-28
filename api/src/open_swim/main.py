@@ -2,7 +2,7 @@ import json
 import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-from open_swim.playlist_sync import sync_playlist, get_playlist_to_sync
+from open_swim.playlist_library_sync import sync_library_playlist, get_playlist_to_sync
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,7 +24,7 @@ def main() -> None:
         playlists_to_sync = get_playlist_to_sync()
         for playlist_url in playlists_to_sync:
             print(f"[Playlist Sync] Syncing playlist: {playlist_url}")
-            sync_playlist(playlist_url)
+            sync_library_playlist(playlist_url)
 
     def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""

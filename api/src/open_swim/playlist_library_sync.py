@@ -16,7 +16,7 @@ def get_playlist_to_sync() -> List[str]:
     playlist_ids = [id.strip() for id in playlist_ids_str.split(",") if id.strip()]
     return [f"https://youtube.com/playlist?list={playlist_id}" for playlist_id in playlist_ids]
 
-def sync_playlist(playlist_url: str) -> None:
+def sync_library_playlist(playlist_url: str) -> None:
     playlist_videos = extract_playlist(playlist_url)
     for video in playlist_videos:
         library_video_info = get_library_video_info(video.id)
