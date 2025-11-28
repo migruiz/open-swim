@@ -1,19 +1,14 @@
 import json
 import time
-from typing import List
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-from open_swim.playlist_sync import sync_playlist
+from open_swim.playlist_sync import sync_playlist, get_playlist_to_sync
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-def get_playlist_to_sync() -> List[str]:
-    """Return a list of playlist URLs to sync."""
-    return [
-        "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
-    ]
+
 
 
 def main() -> None:
