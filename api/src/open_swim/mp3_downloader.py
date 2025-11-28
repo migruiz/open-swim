@@ -9,13 +9,12 @@ from pydantic import BaseModel
 
 
 
-class DownloadedMP3(BaseModel):
+class OriginalTempDownloadedMP3(BaseModel):
     file_path: str
-    video_id: str
     file_size: int
 
 
-def download_mp3(video_id: str) -> DownloadedMP3:
+def download_mp3_to_temp(video_id: str) -> OriginalTempDownloadedMP3:
     """
     Download a YouTube video as MP3 using yt-dlp.
     
@@ -79,9 +78,8 @@ def download_mp3(video_id: str) -> DownloadedMP3:
         # Get file size
         file_size = os.path.getsize(output_path)
         
-        return DownloadedMP3(
+        return OriginalTempDownloadedMP3(
             file_path=output_path,
-            video_id=video_id,
             file_size=file_size
         )
         

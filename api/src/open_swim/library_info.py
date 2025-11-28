@@ -1,23 +1,27 @@
 import json
 import os
+import re
 import shutil
 from pydantic import BaseModel
 from typing import Dict
 
-from open_swim.mp3_downloader import DownloadedMP3
+from open_swim.mp3_downloader import OriginalTempDownloadedMP3
 from open_swim.playlist_extractor import YoutubeVideo
 
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/')
 
+
 class LibraryMp3Info(BaseModel):
     video_id: str
-    path: str
+    original_mp3_path: str
+    original_mp3_downloaded: bool = False
     duration: int
     title: str
 
+
 class LibraryData(BaseModel):
     videos: Dict[str, LibraryMp3Info]
-    
+
     @classmethod
     def from_dict(cls, videos: dict) -> "LibraryData":
         """Parse the JSON structure where keys are video IDs"""
@@ -27,6 +31,7 @@ class LibraryData(BaseModel):
 def is_video_in_library(video_id: str) -> bool:
     library_data = _load_library_info()
     return video_id in library_data.videos
+
 
 def _load_library_info() -> LibraryData:
     info_json_path = os.path.join(LIBRARY_PATH, "info.json")
@@ -38,17 +43,21 @@ def _load_library_info() -> LibraryData:
         print("[Info JSON] info.json does not exist in /library/")
         return LibraryData(videos={})
 
-def _save_file_to_library(mp3_info: DownloadedMP3) -> str:
-        # Ensure /library/ directory exists     
+
+def _save_file_to_library(temp_downloaded_mp3: OriginalTempDownloadedMP3, youtube_video: YoutubeVideo) -> str:
+    # Ensure /library/ directory exists
     os.makedirs(LIBRARY_PATH, exist_ok=True)
 
     # Copy the downloaded MP3 file to /library/
-    destination_path = os.path.join(LIBRARY_PATH, os.path.basename(mp3_info.file_path))
-    shutil.copy2(mp3_info.file_path, destination_path)
+    destination_path = os.path.join(
+        LIBRARY_PATH, os.path.basename(temp_downloaded_mp3.file_path))
+    shutil.copy2(temp_downloaded_mp3.file_path, destination_path)
     print(f"[File Copy] Copied MP3 to {destination_path}")
 
-    print(f"[MP3 Downloader] Downloaded MP3 for video ID {mp3_info.video_id}: {mp3_info.file_path}") 
+    print(
+        f"[MP3 Downloader] Downloaded MP3 for video ID {temp_downloaded_mp3.file_path}: {temp_downloaded_mp3.file_path}")
     return destination_path
+
 
 def _save_library_info(library_data: LibraryData) -> None:
     info_json_path = os.path.join(LIBRARY_PATH, "info.json")
@@ -56,14 +65,17 @@ def _save_library_info(library_data: LibraryData) -> None:
         json.dump(library_data.model_dump(), f, indent=2)
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
-def add_mp3_to_library(youtube_video: YoutubeVideo, downloaded_mp3: DownloadedMP3) -> None:
-    mp3_file_library_path = _save_file_to_library(downloaded_mp3)
+
+def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3: OriginalTempDownloadedMP3) -> None:
+    mp3_file_library_path = _save_file_to_library(
+        temp_downloaded_mp3=temp_downloaded_mp3, youtube_video=youtube_video)
     video_info = LibraryMp3Info(
-        video_id=downloaded_mp3.video_id,
+        video_id=youtube_video.id,
         duration=youtube_video.duration,
-        title=youtube_video.title,      
-        path=mp3_file_library_path
+        title=youtube_video.title,
+        original_mp3_path=mp3_file_library_path,
+        original_mp3_downloaded=True
     )
     library_data = _load_library_info()
-    library_data.videos[downloaded_mp3.video_id] = video_info
+    library_data.videos[youtube_video.id] = video_info
     _save_library_info(library_data)

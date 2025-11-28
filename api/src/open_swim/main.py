@@ -3,8 +3,8 @@ import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
-from open_swim.mp3_downloader import download_mp3
-from open_swim.library_info import is_video_in_library,  add_mp3_to_library
+from open_swim.mp3_downloader import download_mp3_to_temp
+from open_swim.library_info import is_video_in_library,  add_original_mp3_to_library
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,10 +29,10 @@ def main() -> None:
                     f"[Library Info] Video ID {video.id} already in library.")
                 continue
             else:
-                downloaded_mp3 = download_mp3(video_id=video.id)
-                add_mp3_to_library(
+                temp_downloaded_mp3 = download_mp3_to_temp(video_id=video.id)
+                add_original_mp3_to_library(
                     youtube_video=video,
-                    downloaded_mp3=downloaded_mp3
+                    temp_downloaded_mp3=temp_downloaded_mp3
                 )
         print(
             f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
