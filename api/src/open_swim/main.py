@@ -1,14 +1,19 @@
 import json
 import time
+from typing import List
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-from open_swim.playlist_extractor import extract_playlist
-from open_swim.mp3_downloader import download_mp3_to_temp
-from open_swim.library_info import get_library_video_info,  add_original_mp3_to_library, add_normalized_mp3_to_library
-from open_swim.volume_normalizer import get_normalized_loudness_file
+from open_swim.playlist_sync import sync_playlist
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def get_playlist_to_sync() -> List[str]:
+    """Return a list of playlist URLs to sync."""
+    return [
+        "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
+    ]
 
 
 def main() -> None:
@@ -21,39 +26,10 @@ def main() -> None:
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
         mqtt_client.subscribe("test/topic")
 
-        # Extract playlist details and publish them
-        playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
-        playlist_videos = extract_playlist(playlist_url)
-        for video in playlist_videos:
-            library_video_info = get_library_video_info(video.id)
-            if library_video_info:
-                print(
-                    f"[Library Info] Video ID {video.id} already in library.")
-                if (not library_video_info.normalized_mp3_converted):
-                    temp_normalized_mp3_path = get_normalized_loudness_file(
-                        mp3_file_path=library_video_info.original_mp3_path
-                    )
-                    add_normalized_mp3_to_library(
-                        youtube_video=video,
-                        temp_normalized_mp3_path=temp_normalized_mp3_path
-                    )
-
-            else:
-                temp_downloaded_mp3_path = download_mp3_to_temp(
-                    video_id=video.id)
-                original_mp3_path = add_original_mp3_to_library(
-                    youtube_video=video,
-                    temp_downloaded_mp3_path=temp_downloaded_mp3_path
-                )
-                temp_normalized_mp3_path = get_normalized_loudness_file(
-                    mp3_file_path=original_mp3_path
-                )
-                add_normalized_mp3_to_library(
-                    youtube_video=video,
-                    temp_normalized_mp3_path=temp_normalized_mp3_path
-                )
-        print(
-            f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
+        playlists_to_sync = get_playlist_to_sync()
+        for playlist_url in playlists_to_sync:
+            print(f"[Playlist Sync] Syncing playlist: {playlist_url}")
+            sync_playlist(playlist_url)
 
     def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""
