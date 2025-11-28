@@ -67,6 +67,8 @@ def extract_playlist(playlist_url: str) -> PlaylistInfo:
         data = json.loads(stdout.strip())
         
         # Extract video entries
+        # Note: yt-dlp returns playlist entries in the order they appear on YouTube by default.
+        # The 'entries' list should be ordered as on the playlist page, unless yt-dlp options change it.
         videos: List[YoutubeVideo] = []
         for entry in data.get('entries', []):
             if not entry:  # Skip None entries
