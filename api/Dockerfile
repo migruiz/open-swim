@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     util-linux \
     ffmpeg \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python system packages
@@ -21,9 +20,9 @@ RUN pip install --no-cache-dir yt-dlp piper-tts
 
 # Download Piper voice files (infrequent changes)
 RUN mkdir -p /voices && \
-    wget -O /voices/en_US-hfc_female-medium.onnx \
+    curl -L -o /voices/en_US-hfc_female-medium.onnx \
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" && \
-    wget -O /voices/en_US-hfc_female-medium.onnx.json \
+    curl -L -o /voices/en_US-hfc_female-medium.onnx.json \
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true"
 
 # Install uv

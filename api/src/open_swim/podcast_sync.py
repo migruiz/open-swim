@@ -106,7 +106,7 @@ def generate_audio_intro(playlist_number:int, index: int, total: int, output_dir
     piper_cmd = os.getenv('PIPER_PATH', 'piper')
     piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
-        #'uv','run',
+        'uv','run',
         'piper',
         '-m', piper_model,
         '-f', str(wav_output),
