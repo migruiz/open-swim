@@ -48,14 +48,20 @@ def _save_file_to_library(temp_downloaded_mp3: OriginalTempDownloadedMP3, youtub
     # Ensure /library/ directory exists
     os.makedirs(LIBRARY_PATH, exist_ok=True)
 
+    # Sanitize title to remove special characters
+    sanitized_title = re.sub(r'[^\w\s-]', '', youtube_video.title)
+    sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
+    
+    # Create filename in format: [title]_[videoId].mp3
+    filename = f"{sanitized_title}_{youtube_video.id}.mp3"
+    destination_path = os.path.join(LIBRARY_PATH, filename)
+    
     # Copy the downloaded MP3 file to /library/
-    destination_path = os.path.join(
-        LIBRARY_PATH, os.path.basename(temp_downloaded_mp3.file_path))
     shutil.copy2(temp_downloaded_mp3.file_path, destination_path)
     print(f"[File Copy] Copied MP3 to {destination_path}")
 
     print(
-        f"[MP3 Downloader] Downloaded MP3 for video ID {temp_downloaded_mp3.file_path}: {temp_downloaded_mp3.file_path}")
+        f"[MP3 Downloader] Downloaded MP3 for video ID {youtube_video.id}: {destination_path}")
     return destination_path
 
 
