@@ -7,7 +7,7 @@ from typing import Dict
 
 from open_swim.playlist_extractor import YoutubeVideo
 
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/')
+LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/youtube')
 
 
 class LibraryMp3Info(BaseModel):

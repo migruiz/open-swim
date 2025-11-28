@@ -103,11 +103,10 @@ def generate_audio_intro(playlist_number:int, index: int, total: int, output_dir
     
     # Use piper to generate the speech (outputs WAV)
     # Note: You may need to specify a voice model path with --model
-    piper_cmd = os.getenv('PIPER_PATH', 'piper')
+    piper_cmd_parts = os.getenv('PIPER_PATH', 'piper').split()
     piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
-        'uv','run',
-        'piper',
+        *piper_cmd_parts,
         '-m', piper_model,
         '-f', str(wav_output),
         '--', text

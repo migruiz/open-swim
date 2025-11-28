@@ -6,7 +6,7 @@ import shutil
 import json
 import hashlib
 from typing import List, Dict, Any
-from open_swim.library_info import load_library_info, LibraryData, LIBRARY_PATH
+from open_swim.library_info import load_library_info, LibraryData
 from open_swim.playlist_extractor import PlaylistInfo
 
 
