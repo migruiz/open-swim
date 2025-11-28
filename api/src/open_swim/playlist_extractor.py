@@ -10,8 +10,6 @@ class YoutubeVideo(BaseModel):
     id: str
     title: str
     url: str = ""
-    thumbnail: str = ""
-    duration: int = 0
 
 
 class PlaylistInfo(BaseModel):
@@ -48,7 +46,7 @@ def extract_playlist(playlist_url: str) -> PlaylistInfo:
         yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
         print(f"Extracting playlist info from URL: {playlist_url}")
         # Use --dump-single-json to get playlist metadata (including title) and entries
-        command = [yt_dlp_cmd, '--dump-single-json', playlist_url]
+        command = [yt_dlp_cmd, '--dump-single-json','--flat-playlist', playlist_url]
 
         result = subprocess.run(
             command,
@@ -78,11 +76,7 @@ def extract_playlist(playlist_url: str) -> PlaylistInfo:
             video = YoutubeVideo(
                 id=entry.get('id', ''),
                 title=entry.get('title', 'Unknown Title'),
-                url=entry.get('url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
-                thumbnail=entry.get('thumbnail', '') or (
-                    entry.get('thumbnails', [{}])[-1].get('url', '') if entry.get('thumbnails') else ''
-                ),
-                duration=entry.get('duration', 0)
+                url=entry.get('url', f"https://www.youtube.com/watch?v={entry.get('id', '')}")
             )
             videos.append(video)
 

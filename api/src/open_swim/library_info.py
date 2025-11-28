@@ -17,8 +17,6 @@ class LibraryMp3Info(BaseModel):
     
     normalized_mp3_path: str | None = None
     normalized_mp3_converted: bool = False
-    
-    duration: int
     title: str
 
 
@@ -97,7 +95,6 @@ def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3
     
     video_info = LibraryMp3Info(
         video_id=youtube_video.id,
-        duration=youtube_video.duration,
         title=youtube_video.title,
         original_mp3_path=original_mp3_file_library_path,
         original_mp3_downloaded=True
