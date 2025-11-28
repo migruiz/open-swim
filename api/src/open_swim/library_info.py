@@ -23,7 +23,12 @@ class LibraryData(BaseModel):
         """Parse the JSON structure where keys are video IDs"""
         return cls(videos=videos)
 
-def load_library_info() -> LibraryData:
+
+def is_video_in_library(video_id: str) -> bool:
+    library_data = _load_library_info()
+    return video_id in library_data.videos
+
+def _load_library_info() -> LibraryData:
     info_json_path = os.path.join(LIBRARY_PATH, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
@@ -45,7 +50,7 @@ def _save_file_to_library(mp3_info: DownloadedMP3) -> str:
     print(f"[MP3 Downloader] Downloaded MP3 for video ID {mp3_info.video_id}: {mp3_info.file_path}") 
     return destination_path
 
-def add_mp3_to_library(library_data: LibraryData,youtube_video: YoutubeVideo, downloaded_mp3: DownloadedMP3) -> None:
+def add_mp3_to_library(youtube_video: YoutubeVideo, downloaded_mp3: DownloadedMP3) -> None:
     mp3_file_library_path = _save_file_to_library(downloaded_mp3)
     video_info = LibraryMp3Info(
         video_id=downloaded_mp3.video_id,
@@ -53,6 +58,7 @@ def add_mp3_to_library(library_data: LibraryData,youtube_video: YoutubeVideo, do
         title=youtube_video.title,      
         path=mp3_file_library_path
     )
+    library_data = _load_library_info()
     library_data.videos[downloaded_mp3.video_id] = video_info
     info_json_path = os.path.join(LIBRARY_PATH, "info.json")
     with open(info_json_path, "w", encoding="utf-8") as f:

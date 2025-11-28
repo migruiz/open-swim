@@ -4,7 +4,7 @@ from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_extractor import extract_playlist
 from open_swim.mp3_downloader import download_mp3
-from open_swim.library_info import load_library_info,  add_mp3_to_library
+from open_swim.library_info import is_video_in_library,  add_mp3_to_library
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,15 +24,13 @@ def main() -> None:
         playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvyPc4w6TwVB212xjar0wubX&si=9HiBeaMjWphBZ_bY"
         playlist_videos = extract_playlist(playlist_url)
         for video in playlist_videos:
-            library_info = load_library_info()
-            if library_info.videos.get(video.id):
+            if is_video_in_library(video.id):
                 print(
                     f"[Library Info] Video ID {video.id} already in library.")
                 continue
             else:
                 downloaded_mp3 = download_mp3(video_id=video.id)
                 add_mp3_to_library(
-                    library_data=library_info,
                     youtube_video=video,
                     downloaded_mp3=downloaded_mp3
                 )
