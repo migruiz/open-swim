@@ -7,6 +7,15 @@ import subprocess
 from pathlib import Path
 
 
+def sync_podcast_episodes() -> None:
+    """Sync multiple podcast episodes by processing each one."""
+    episode_urls: List[str] = [
+        "https://dts.podtrac.com/redirect.mp3/od-cmg.streamguys1.com/sanantonio/san995/20251126100250-38-BillyMadisonShowPodcast-November262025.mp3?awCollectionId=san995-02&awGenre=Comedy&awEpisodeId=5c56a100-cae1-11f0-99fd-9d2893fba4d7",
+        # Add more episode URLs as needed
+    ]
+    for episode_url in episode_urls:
+        process_podcast_episode(episode_url, episode_urls.index(episode_url) + 1)
+
 def process_podcast_episode(episode_url: str, playlist_number: int) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
     # Create a temporary directory for processing

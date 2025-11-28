@@ -5,6 +5,8 @@ from open_swim.device_monitor import DeviceMonitor
 from open_swim.playlist_library_sync import sync_library_playlist, get_playlist_to_sync
 from open_swim.device_library_sync import sync_with_device
 from dotenv import load_dotenv
+from open_swim.podcast_sync import sync_podcast_episodes
+import threading
 
 load_dotenv()
 
@@ -21,14 +23,15 @@ def main() -> None:
         """Subscribe to test topic when connected. Also extract and publish playlist details."""
         print("[MQTT] Connected to broker, ready to publish/subscribe.")
         mqtt_client.subscribe("test/topic")
-
+        threading.Thread(
+            target=sync_podcast_episodes,
+            daemon=True
+        ).start()
+        return
         playlists_to_sync = get_playlist_to_sync()
         for playlist in playlists_to_sync:
             print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
             sync_library_playlist(playlist)
-
-        # After syncing library playlists, sync with device
-        sync_with_device(playlists_to_sync)
 
     def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""
