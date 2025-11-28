@@ -4,28 +4,13 @@ import os
 import re
 import shutil
 from typing import List
-from open_swim.library_info import load_library_info
+from open_swim.library_info import load_library_info, LibraryData
 from open_swim.playlist_extractor import PlaylistInfo
 
 
-def sync_with_device(play_lists: List[PlaylistInfo]) -> None:
-    """Sync the music library with the connected device."""
-    library_info = load_library_info()
-    device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
-    
-    if not device_sdcard_path:
-        print("[Device Sync] OPEN_SWIM_SD_PATH environment variable not set")
-        return
-    
-    if not os.path.exists(device_sdcard_path):
-        print(f"[Device Sync] Device SD card path does not exist: {device_sdcard_path}")
-        return
-    
-    print(f"[Device Sync] Starting sync to device: {device_sdcard_path}")
-    
-    # Iterate through each playlist
-    for playlist in play_lists:
-        # Sanitize playlist title to remove special characters
+
+def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, device_sdcard_path: str) -> None:
+            # Sanitize playlist title to remove special characters
         playlist_title = re.sub(r'[<>:"/\\|?*]', '_', playlist.title)
         playlist_title = playlist_title.strip()
         playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
@@ -72,5 +57,26 @@ def sync_with_device(play_lists: List[PlaylistInfo]) -> None:
                 print(f"[Device Sync] Error copying {filename}: {e}")
         
         print(f"[Device Sync] Completed playlist: {playlist_title}")
+
+
+def sync_with_device(play_lists: List[PlaylistInfo]) -> None:
+    """Sync the music library with the connected device."""
+    library_info = load_library_info()
+    device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
+    
+    if not device_sdcard_path:
+        print("[Device Sync] OPEN_SWIM_SD_PATH environment variable not set")
+        return
+    
+    if not os.path.exists(device_sdcard_path):
+        print(f"[Device Sync] Device SD card path does not exist: {device_sdcard_path}")
+        return
+    
+    print(f"[Device Sync] Starting sync to device: {device_sdcard_path}")
+    
+    # Iterate through each playlist
+    for playlist in play_lists:
+        _sync_playlist_to_device(playlist, library_info, device_sdcard_path)
+
     
     print("[Device Sync] Sync completed")
