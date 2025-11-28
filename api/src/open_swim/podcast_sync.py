@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 
-def process_podcast_episode(episode_url: str) -> None:
+def process_podcast_episode(episode_url: str, playlist_number: int) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
     # Create a temporary directory for processing
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -15,22 +15,21 @@ def process_podcast_episode(episode_url: str) -> None:
         
         # 1. Download the podcast
         print(f"Downloading podcast from {episode_url}...")
-        episode_path = download_podcast(episode_url, tmp_path)
+        episode_path = download_podcast(url=episode_url, output_dir=tmp_path)
         
         # 2. Split the podcast into 10-minute segments
         print("Splitting podcast into 10-minute segments...")
-        segment_paths = split_podcast_episode(episode_path, tmp_path)
+        segment_paths = split_podcast_episode(episode_path=episode_path, output_dir=tmp_path)
         
         # 3 & 4. For each segment, generate intro and merge
         total_segments = len(segment_paths)
         print(f"Processing {total_segments} segments...")
-        
         final_segments = []
         for index, segment_path in enumerate(segment_paths, start=1):
             print(f"Processing segment {index} of {total_segments}...")
             
             # Generate audio intro
-            intro_path = generate_audio_intro(index, total_segments, tmp_path)
+            intro_path = generate_audio_intro(playlist_number=playlist_number, index=index, total=total_segments, output_dir=tmp_path)
             
             # Merge intro and segment
             merged_path = merge_intro_and_segment(segment_path, intro_path, tmp_path, index)
@@ -64,7 +63,7 @@ def download_podcast(url: str, output_dir: Path) -> Path:
 def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     """Split the podcast episode into 10-minute segments using ffmpeg.
     Returns list of segment file paths."""
-    segment_duration = 600  # 10 minutes in seconds
+    segment_duration = 60 * 5  # 5 minutes in seconds
     segment_pattern = output_dir / "segment_%03d.mp3"
     
     # Use ffmpeg to split the file
@@ -84,12 +83,12 @@ def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     segments = sorted(output_dir.glob("segment_*.mp3"))
     return segments
 
-def generate_audio_intro(index: int, total: int, output_dir: Path) -> Path:
+def generate_audio_intro(playlist_number:int, index: int, total: int, output_dir: Path) -> Path:
     """Generate an intro audio segment for the given index out of total segments. e.g. "1 of 5"
     Returns path to the generated audio file.
     Uses piper to generate the audio in the format: "{index}_of_{total}.mp3"
     """
-    text = f"{index} of {total}"
+    text = f"{index} of {total}.{playlist_number}"
     wav_output = output_dir / f"intro_{index}_of_{total}.wav"
     mp3_output = output_dir / f"intro_{index}_of_{total}.mp3"
     
@@ -98,7 +97,8 @@ def generate_audio_intro(index: int, total: int, output_dir: Path) -> Path:
     piper_cmd = os.getenv('PIPER_PATH', 'piper')
     piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
-        'uv','run','piper',
+        'uv','run',
+        'piper',
         '-m', piper_model,
         '-f', str(wav_output),
         '--', text
@@ -121,19 +121,33 @@ def generate_audio_intro(index: int, total: int, output_dir: Path) -> Path:
     return mp3_output
 
 def merge_intro_and_segment(segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
-    """Merge intro audio and segment into a single audio file.
+    """Merge intro audio and segment into a single audio file with 1 second silence between them.
     Returns path to the merged file."""
     output_path = output_dir / f"final_segment_{index:03d}.mp3"
+    
+    # Generate 0.5 second of silence
+    silence_path = output_dir / f"silence_{index}.mp3"
+    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
+    silence_cmd = [
+        ffmpeg_cmd,
+        '-f', 'lavfi',
+        '-i', 'anullsrc=r=44100:cl=stereo',
+        '-t', '0.5',
+        '-codec:a', 'libmp3lame',
+        '-b:a', '128k',
+        str(silence_path)
+    ]
+    subprocess.run(silence_cmd, check=True, capture_output=True)
     
     # Create a temporary file list for ffmpeg concat
     concat_list_path = output_dir / f"concat_list_{index}.txt"
     with open(concat_list_path, 'w') as f:
-        f.write(f"file '{intro_path.absolute()}\n")
-        f.write(f"file '{segment_path.absolute()}\n")
+        f.write(f"file '{intro_path.absolute()}'\n")
+        f.write(f"file '{silence_path.absolute()}'\n")
+        f.write(f"file '{segment_path.absolute()}'\n")
     
     # Use ffmpeg to concatenate the files
     # Re-encode to ensure consistent format/bitrate instead of using -c copy
-    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
         ffmpeg_cmd,
         '-f', 'concat',
