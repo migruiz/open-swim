@@ -22,9 +22,9 @@ def main() -> None:
         mqtt_client.subscribe("test/topic")
 
         playlists_to_sync = get_playlist_to_sync()
-        for playlist_url in playlists_to_sync:
-            print(f"[Playlist Sync] Syncing playlist: {playlist_url}")
-            sync_library_playlist(playlist_url)
+        for playlist in playlists_to_sync:
+            print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
+            sync_library_playlist(playlist)
 
     def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""
