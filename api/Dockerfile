@@ -1,61 +1,46 @@
 # syntax=docker/dockerfile:1.7
 
-# Stage 1: Build dependencies
-FROM --platform=$TARGETPLATFORM python:3.12-slim AS build
-WORKDIR /app
+FROM --platform=$TARGETPLATFORM python:3.12-slim
 
-# Install uv
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
-
-# Copy dependency files first for better layer caching
-COPY pyproject.toml README.md ./
-# COPY uv.lock ./  # uncomment when lock file is added
-
-# Install dependencies directly into system Python (no venv)
-RUN uv pip install --system --no-cache .
-
-# Copy application source
-COPY src ./src
-
-# Install the project package
-RUN uv pip install --system --no-cache --no-deps .
-
-
-# Stage 2: Runtime image
-FROM --platform=$TARGETPLATFORM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Copy installed packages from system site-packages
-COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=build /usr/local/bin/open-swim /usr/local/bin/open-swim
-
-# Copy application source and metadata
-COPY --from=build /app/src /app/src
-COPY --from=build /app/README.md /app/README.md
-
-# Install required system utilities for device management
+# Install system packages first (least likely to change)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
     util-linux \
     ffmpeg \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python system packages
 RUN pip install --no-cache-dir yt-dlp piper-tts
 
-
-
-# Download Piper voice files
+# Download Piper voice files (infrequent changes)
 RUN mkdir -p /voices && \
     wget -O /voices/en_US-hfc_female-medium.onnx \
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" && \
     wget -O /voices/en_US-hfc_female-medium.onnx.json \
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true"
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy dependency files and install project dependencies
+COPY pyproject.toml README.md ./
+# COPY uv.lock ./  # uncomment when lock file is added
+
+RUN uv pip install --system --no-cache .
+
+# Copy application source last (most likely to change)
+COPY src ./src
+
+# Install the project package
+RUN uv pip install --system --no-cache --no-deps .
 
 # Create mount point directory
 RUN mkdir -p /mnt/openswim

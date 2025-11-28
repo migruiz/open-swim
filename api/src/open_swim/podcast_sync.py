@@ -72,7 +72,7 @@ def download_podcast(url: str, output_dir: Path) -> Path:
 def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     """Split the podcast episode into 10-minute segments using ffmpeg.
     Returns list of segment file paths."""
-    segment_duration = 60 * 5  # 5 minutes in seconds
+    segment_duration = 60 * 10  # 10 minutes in seconds
     segment_pattern = output_dir / "segment_%03d.mp3"
     
     # Use ffmpeg to split the file
@@ -106,7 +106,7 @@ def generate_audio_intro(playlist_number:int, index: int, total: int, output_dir
     piper_cmd = os.getenv('PIPER_PATH', 'piper')
     piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
-        'uv','run',
+        #'uv','run',
         'piper',
         '-m', piper_model,
         '-f', str(wav_output),
