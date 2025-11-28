@@ -5,7 +5,6 @@ import shutil
 from pydantic import BaseModel
 from typing import Dict
 
-from open_swim.mp3_downloader import OriginalTempDownloadedMP3
 from open_swim.playlist_extractor import YoutubeVideo
 
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/')
@@ -44,7 +43,7 @@ def _load_library_info() -> LibraryData:
         return LibraryData(videos={})
 
 
-def _save_file_to_library(temp_downloaded_mp3: OriginalTempDownloadedMP3, youtube_video: YoutubeVideo) -> str:
+def _save_file_to_library(temp_downloaded_mp3_path: str, youtube_video: YoutubeVideo) -> str:
     # Ensure /library/ directory exists
     os.makedirs(LIBRARY_PATH, exist_ok=True)
 
@@ -52,12 +51,12 @@ def _save_file_to_library(temp_downloaded_mp3: OriginalTempDownloadedMP3, youtub
     sanitized_title = re.sub(r'[^\w\s-]', '', youtube_video.title)
     sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
     
-    # Create filename in format: [title]___[videoId].mp3
-    filename = f"{sanitized_title}___{youtube_video.id}.mp3"
+    # Create filename in format: [title]__original__[videoId].mp3
+    filename = f"{sanitized_title}__original__{youtube_video.id}.mp3"
     destination_path = os.path.join(LIBRARY_PATH, filename)
     
     # Copy the downloaded MP3 file to /library/
-    shutil.copy2(temp_downloaded_mp3.file_path, destination_path)
+    shutil.copy2(temp_downloaded_mp3_path, destination_path)
     print(f"[File Copy] Copied MP3 to {destination_path}")
 
     print(
@@ -72,9 +71,9 @@ def _save_library_info(library_data: LibraryData) -> None:
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
-def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3: OriginalTempDownloadedMP3) -> None:
+def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3_path: str) -> None:
     mp3_file_library_path = _save_file_to_library(
-        temp_downloaded_mp3=temp_downloaded_mp3, youtube_video=youtube_video)
+        temp_downloaded_mp3_path=temp_downloaded_mp3_path, youtube_video=youtube_video)
     video_info = LibraryMp3Info(
         video_id=youtube_video.id,
         duration=youtube_video.duration,

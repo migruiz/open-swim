@@ -9,12 +9,10 @@ from pydantic import BaseModel
 
 
 
-class OriginalTempDownloadedMP3(BaseModel):
-    file_path: str
-    file_size: int
 
 
-def download_mp3_to_temp(video_id: str) -> OriginalTempDownloadedMP3:
+
+def download_mp3_to_temp(video_id: str) -> str:
     """
     Download a YouTube video as MP3 using yt-dlp.
     
@@ -74,14 +72,9 @@ def download_mp3_to_temp(video_id: str) -> OriginalTempDownloadedMP3:
             raise RuntimeError("Downloaded file not found")
         
 
+  
         
-        # Get file size
-        file_size = os.path.getsize(output_path)
-        
-        return OriginalTempDownloadedMP3(
-            file_path=output_path,
-            file_size=file_size
-        )
+        return output_path
         
     except subprocess.TimeoutExpired:
         # Clean up partial download if exists

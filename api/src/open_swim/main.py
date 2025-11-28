@@ -29,10 +29,10 @@ def main() -> None:
                     f"[Library Info] Video ID {video.id} already in library.")
                 continue
             else:
-                temp_downloaded_mp3 = download_mp3_to_temp(video_id=video.id)
+                temp_downloaded_mp3_path = download_mp3_to_temp(video_id=video.id)
                 add_original_mp3_to_library(
                     youtube_video=video,
-                    temp_downloaded_mp3=temp_downloaded_mp3
+                    temp_downloaded_mp3_path=temp_downloaded_mp3_path
                 )
         print(
             f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
