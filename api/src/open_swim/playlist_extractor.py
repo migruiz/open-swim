@@ -3,23 +3,32 @@ import subprocess
 import json
 import sys
 from typing import Dict, List, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from dataclasses import dataclass
 
 class YoutubeVideo(BaseModel):
     id: str
     title: str
-    url: str
-    thumbnail: str
-    duration: int
+    url: str = ""
+    thumbnail: str = ""
+    duration: int = 0
 
-def extract_playlist(playlist_url: str) -> List[YoutubeVideo]:
+
+class PlaylistInfo(BaseModel):
+    id: str
+    title: str
+    uploader: Optional[str] = None
+    uploader_id: Optional[str] = None
+    playlist_count: int = Field(default=0, alias="_playlist_count")
+    videos: List[YoutubeVideo] = []
+
+
+def extract_playlist(playlist_url: str) -> PlaylistInfo:
     """
     Extract playlist information from a YouTube playlist URL using yt-dlp.
     Raises ValueError or RuntimeError on error.
     Returns:
-        List of PlaylistVideo objects
+        PlaylistInfo object containing playlist metadata and list of videos
     """
     # Validate input
     if not playlist_url:
@@ -37,7 +46,8 @@ def extract_playlist(playlist_url: str) -> List[YoutubeVideo]:
     try:
         # Execute yt-dlp command
         yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
-        command = [yt_dlp_cmd, '--flat-playlist', '--dump-json', playlist_url]
+        # Use --dump-single-json to get playlist metadata (including title) and entries
+        command = [yt_dlp_cmd, '--dump-single-json', playlist_url]
 
         result = subprocess.run(
             command,
@@ -53,28 +63,43 @@ def extract_playlist(playlist_url: str) -> List[YoutubeVideo]:
             print(f'yt-dlp error: {stderr}')
             raise RuntimeError('Failed to fetch playlist information')
 
-        # Parse JSON output (each line is a separate JSON object)
+        # Parse JSON output - --dump-single-json returns a single JSON object
+        data = json.loads(stdout.strip())
+        
+        # Extract video entries
         videos: List[YoutubeVideo] = []
-
-
-        for line in stdout.strip().split('\n'):
-            line = line.strip()
-            if not line:
+        for entry in data.get('entries', []):
+            if not entry:  # Skip None entries
                 continue
-            data = json.loads(line)
+            
             video = YoutubeVideo(
-                id=data.get('id', ''),
-                title=data.get('title', 'Unknown Title'),
-                url=data.get('url', f"https://www.youtube.com/watch?v={data.get('id', '')}"),
-                thumbnail=data.get('thumbnail', '') or (data.get('thumbnails', [{}])[0].get('url', '') if data.get('thumbnails') else ''),
-                duration=data.get('duration', 0)
+                id=entry.get('id', ''),
+                title=entry.get('title', 'Unknown Title'),
+                url=entry.get('url', f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
+                thumbnail=entry.get('thumbnail', '') or (
+                    entry.get('thumbnails', [{}])[-1].get('url', '') if entry.get('thumbnails') else ''
+                ),
+                duration=entry.get('duration', 0)
             )
             videos.append(video)
 
-        return videos
+        # Create PlaylistInfo object
+        playlist_info = PlaylistInfo(
+            id=data.get('id', ''),
+            title=data.get('title', 'Unknown Playlist'),
+            uploader=data.get('uploader'),
+            uploader_id=data.get('uploader_id'),
+            _playlist_count=data.get('playlist_count', len(videos)),
+            videos=videos
+        )
+
+        return playlist_info
 
     except subprocess.TimeoutExpired:
         raise RuntimeError('Request timeout while fetching playlist')
+    except json.JSONDecodeError as e:
+        print(f'Failed to parse JSON output: {e}')
+        raise RuntimeError('Failed to parse playlist information')
     except Exception as e:
         print(f'Unexpected error: {e}')
         raise
