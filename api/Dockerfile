@@ -46,23 +46,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir yt-dlp
+RUN pip install --no-cache-dir yt-dlp piper-tts
 
-# Download Piper binary based on platform
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        wget -O /tmp/piper.tar.gz "https://github.com/rhasspy/piper/releases/latest/download/piper_linux_x86_64.tar.gz" \
-        && tar -xzf /tmp/piper.tar.gz -C /tmp \
-        && mv /tmp/piper/* /usr/local/bin/ \
-        && chmod +x /usr/local/bin/piper \
-        && rm -rf /tmp/piper.tar.gz /tmp/piper; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-        wget -O /tmp/piper.tar.gz "https://github.com/rhasspy/piper/releases/latest/download/piper_linux_aarch64.tar.gz" \
-        && tar -xzf /tmp/piper.tar.gz -C /tmp \
-        && mv /tmp/piper/* /usr/local/bin/ \
-        && chmod +x /usr/local/bin/piper \
-        && rm -rf /tmp/piper.tar.gz /tmp/piper; \
-    fi
+
 
 # Download Piper voice files
 RUN mkdir -p /voices && \
