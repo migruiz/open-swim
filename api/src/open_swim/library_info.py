@@ -52,8 +52,8 @@ def _save_file_to_library(temp_downloaded_mp3: OriginalTempDownloadedMP3, youtub
     sanitized_title = re.sub(r'[^\w\s-]', '', youtube_video.title)
     sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
     
-    # Create filename in format: [title]_[videoId].mp3
-    filename = f"{sanitized_title}_{youtube_video.id}.mp3"
+    # Create filename in format: [title]___[videoId].mp3
+    filename = f"{sanitized_title}___{youtube_video.id}.mp3"
     destination_path = os.path.join(LIBRARY_PATH, filename)
     
     # Copy the downloaded MP3 file to /library/
