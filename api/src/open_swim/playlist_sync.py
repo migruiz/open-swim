@@ -4,6 +4,7 @@ from open_swim.playlist_extractor import extract_playlist
 from open_swim.mp3_downloader import download_mp3_to_temp
 from open_swim.library_info import get_library_video_info, add_original_mp3_to_library, add_normalized_mp3_to_library
 from open_swim.volume_normalizer import get_normalized_loudness_file
+from open_swim.file_tools import remove_file
 
 
 def get_playlist_to_sync() -> List[str]:
@@ -30,7 +31,7 @@ def sync_playlist(playlist_url: str) -> None:
                     youtube_video=video,
                     temp_normalized_mp3_path=temp_normalized_mp3_path
                 )
-
+                remove_file(temp_normalized_mp3_path)
         else:
             temp_downloaded_mp3_path = download_mp3_to_temp(
                 video_id=video.id)
@@ -38,6 +39,7 @@ def sync_playlist(playlist_url: str) -> None:
                 youtube_video=video,
                 temp_downloaded_mp3_path=temp_downloaded_mp3_path
             )
+            remove_file(temp_downloaded_mp3_path)
             temp_normalized_mp3_path = get_normalized_loudness_file(
                 mp3_file_path=original_mp3_path
             )
@@ -45,5 +47,6 @@ def sync_playlist(playlist_url: str) -> None:
                 youtube_video=video,
                 temp_normalized_mp3_path=temp_normalized_mp3_path
             )
+            remove_file(temp_normalized_mp3_path)
     print(
         f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
