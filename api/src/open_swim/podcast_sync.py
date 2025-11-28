@@ -49,7 +49,7 @@ def download_podcast(url: str, output_dir: Path) -> Path:
     response.raise_for_status()
     
     # Generate filename from URL or use a default
-    filename = url.split('/')[-1] or 'podcast.mp3'
+    filename = (url.split('/')[-1] or 'podcast.mp3')[:6]
     if not filename.endswith('.mp3'):
         filename += '.mp3'
     
@@ -68,8 +68,9 @@ def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     segment_pattern = output_dir / "segment_%03d.mp3"
     
     # Use ffmpeg to split the file
+    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
-        'ffmpeg',
+        ffmpeg_cmd,
         '-i', str(episode_path),
         '-f', 'segment',
         '-segment_time', str(segment_duration),
@@ -103,14 +104,15 @@ def generate_audio_intro(index: int, total: int, output_dir: Path) -> Path:
     subprocess.run(cmd, input=text.encode(), check=True, capture_output=True)
     
     # Convert WAV to MP3 using ffmpeg
-    ffmpeg_cmd = [
-        'ffmpeg',
+    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
+    cmd = [
+        ffmpeg_cmd,
         '-i', str(wav_output),
         '-codec:a', 'libmp3lame',
         '-b:a', '128k',
         str(mp3_output)
     ]
-    subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+    subprocess.run(cmd, check=True, capture_output=True)
     
     return mp3_output
 
@@ -126,8 +128,9 @@ def merge_intro_and_segment(segment_path: Path, intro_path: Path, output_dir: Pa
         f.write(f"file '{segment_path.absolute()}\n")
     
     # Use ffmpeg to concatenate the files
+    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
-        'ffmpeg',
+        ffmpeg_cmd,
         '-f', 'concat',
         '-safe', '0',
         '-i', str(concat_list_path),
