@@ -37,15 +37,20 @@ def main() -> None:
                         youtube_video=video,
                         temp_normalized_mp3_path=temp_normalized_mp3_path
                     )
-                    print(
-                        f"[Volume Normalizer] Normalized MP3 created at {temp_normalized_mp3_path} for video ID {video.id}")
 
             else:
                 temp_downloaded_mp3_path = download_mp3_to_temp(
                     video_id=video.id)
-                add_original_mp3_to_library(
+                original_mp3_path = add_original_mp3_to_library(
                     youtube_video=video,
                     temp_downloaded_mp3_path=temp_downloaded_mp3_path
+                )
+                temp_normalized_mp3_path = get_normalized_loudness_file(
+                    mp3_file_path=original_mp3_path
+                )
+                add_normalized_mp3_to_library(
+                    youtube_video=video,
+                    temp_normalized_mp3_path=temp_normalized_mp3_path
                 )
         print(
             f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")

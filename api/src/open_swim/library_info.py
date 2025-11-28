@@ -91,7 +91,7 @@ def _save_library_info(library_data: LibraryData) -> None:
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
-def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3_path: str) -> None:
+def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3_path: str) -> str:
     original_mp3_file_library_path = _save_original_file_to_library(
         temp_downloaded_mp3_path=temp_downloaded_mp3_path, youtube_video=youtube_video)
     
@@ -105,6 +105,7 @@ def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3
     library_data = _load_library_info()
     library_data.videos[youtube_video.id] = video_info
     _save_library_info(library_data)
+    return original_mp3_file_library_path
 
 def add_normalized_mp3_to_library(youtube_video: YoutubeVideo, temp_normalized_mp3_path: str) -> None:
     normalized_mp3_file_library_path = _save_normalized_file_to_library(
