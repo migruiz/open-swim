@@ -29,17 +29,14 @@ RUN mkdir -p /voices && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy dependency files and install project dependencies
+# Copy dependency files and install project dependencies in editable mode
 COPY pyproject.toml ./
 # COPY uv.lock ./  # uncomment when lock file is added
 
-RUN uv pip install --system --no-cache .
+RUN uv pip install --system --no-cache -e .
 
 # Copy application source last (most likely to change)
 COPY src ./src
-
-# Install the project package
-RUN uv pip install --system --no-cache --no-deps .
 
 # Create mount point directory
 RUN mkdir -p /mnt/openswim
