@@ -95,13 +95,17 @@ def generate_audio_intro(index: int, total: int, output_dir: Path) -> Path:
     
     # Use piper to generate the speech (outputs WAV)
     # Note: You may need to specify a voice model path with --model
+    piper_cmd = os.getenv('PIPER_PATH', 'piper')
+    piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
-        'piper',
-        '--output_file', str(wav_output),
+        'uv','run','piper',
+        '-m', piper_model,
+        '-f', str(wav_output),
+        '--', text
     ]
     
     # Pipe the text to piper via stdin
-    subprocess.run(cmd, input=text.encode(), check=True, capture_output=True)
+    subprocess.run(cmd, check=True, capture_output=True)
     
     # Convert WAV to MP3 using ffmpeg
     ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
@@ -128,13 +132,15 @@ def merge_intro_and_segment(segment_path: Path, intro_path: Path, output_dir: Pa
         f.write(f"file '{segment_path.absolute()}\n")
     
     # Use ffmpeg to concatenate the files
+    # Re-encode to ensure consistent format/bitrate instead of using -c copy
     ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
         ffmpeg_cmd,
         '-f', 'concat',
         '-safe', '0',
         '-i', str(concat_list_path),
-        '-c', 'copy',
+        '-codec:a', 'libmp3lame',
+        '-b:a', '128k',
         str(output_path)
     ]
     
