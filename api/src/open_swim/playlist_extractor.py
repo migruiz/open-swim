@@ -46,6 +46,7 @@ def extract_playlist(playlist_url: str) -> PlaylistInfo:
     try:
         # Execute yt-dlp command
         yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
+        print(f"Extracting playlist info from URL: {playlist_url}")
         # Use --dump-single-json to get playlist metadata (including title) and entries
         command = [yt_dlp_cmd, '--dump-single-json', playlist_url]
 

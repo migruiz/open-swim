@@ -10,16 +10,16 @@ from open_swim.library_info import load_library_info, LibraryData, LIBRARY_PATH
 from open_swim.playlist_extractor import PlaylistInfo
 
 
-def calculate_playlist_hash(playlist: PlaylistInfo) -> str:
+def _calculate_playlist_hash(playlist: PlaylistInfo) -> str:
     """Calculate a unique hash based on video IDs in order."""
     # Create a string with video IDs and their index positions
     video_data = "".join([f"{idx}:{video.id}" for idx, video in enumerate(playlist.videos)])
     return hashlib.sha256(video_data.encode()).hexdigest()
 
 
-def load_device_sync_info() -> Dict[str, Any]:
+def _load_device_sync_info(playlist_folder_path: str) -> Dict[str, Any]:
     """Load device_sync.json file if it exists."""
-    sync_json_path = os.path.join(LIBRARY_PATH, "device_sync.json")
+    sync_json_path = os.path.join(playlist_folder_path, "sync.json")
     if os.path.exists(sync_json_path):
         with open(sync_json_path, "r", encoding="utf-8") as f:
             data: Dict[str, Any] = json.load(f)
@@ -27,20 +27,26 @@ def load_device_sync_info() -> Dict[str, Any]:
     return {}
 
 
-def save_device_sync_info(sync_data: Dict[str, Any]) -> None:
+def _save_device_sync_info(playlist_folder_path: str, sync_data: Dict[str, Any]) -> None:
     """Save device sync data to device_sync.json file."""
-    sync_json_path = os.path.join(LIBRARY_PATH, "device_sync.json")
+    sync_json_path = os.path.join(playlist_folder_path, "sync.json")
     with open(sync_json_path, "w", encoding="utf-8") as f:
         json.dump(sync_data, f, indent=2, ensure_ascii=False)
     print(f"[Device Sync] Saved sync information to {sync_json_path}")
 
 
 def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, device_sdcard_path: str) -> None:
+    
+        # Sanitize playlist title to remove special characters
+        playlist_title = re.sub(r'[<>:"/\\|?*]', '_', playlist.title)
+        playlist_title = playlist_title.strip()
+        playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
+    
         # Load existing device sync info
-        sync_data = load_device_sync_info()
+        sync_data = _load_device_sync_info(playlist_folder_path)
         
         # Calculate current playlist hash
-        current_hash = calculate_playlist_hash(playlist)
+        current_hash = _calculate_playlist_hash(playlist)
         
         # Check if playlist has already been synced with the same content
         playlist_key = f"playlist_{playlist.id}"
@@ -54,10 +60,7 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
         else:
             print(f"[Device Sync] New playlist {playlist.id} ({playlist.title}). Starting device sync...")
         
-        # Sanitize playlist title to remove special characters
-        playlist_title = re.sub(r'[<>:"/\\|?*]', '_', playlist.title)
-        playlist_title = playlist_title.strip()
-        playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
+
         
         print(f"[Device Sync] Processing playlist: {playlist_title}")
         
@@ -111,7 +114,7 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
             "uploader": playlist.uploader,
             "uploader_id": playlist.uploader_id
         }
-        save_device_sync_info(sync_data)
+        _save_device_sync_info(playlist_folder_path = playlist_folder_path, sync_data = sync_data)
 
 
 def sync_with_device(play_lists: List[PlaylistInfo]) -> None:
