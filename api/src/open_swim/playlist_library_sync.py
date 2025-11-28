@@ -17,8 +17,8 @@ def get_playlist_to_sync() -> List[str]:
     return [f"https://youtube.com/playlist?list={playlist_id}" for playlist_id in playlist_ids]
 
 def sync_library_playlist(playlist_url: str) -> None:
-    playlist_videos = extract_playlist(playlist_url)
-    for video in playlist_videos:
+    playlist_info = extract_playlist(playlist_url)
+    for video in playlist_info.videos:
         library_video_info = get_library_video_info(video.id)
         if library_video_info:
             print(
@@ -49,4 +49,4 @@ def sync_library_playlist(playlist_url: str) -> None:
             )
             remove_file(temp_normalized_mp3_path)
     print(
-        f"[Playlist] Extracted and processed {len(playlist_videos)} videos from playlist.")
+        f"[Playlist] Extracted and processed {len(playlist_info.videos)} videos from playlist.")
