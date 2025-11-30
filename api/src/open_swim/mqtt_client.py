@@ -43,6 +43,9 @@ class MQTTClient:
     
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
         """Internal callback when a message is received."""
+        
+    
+        
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
         self.on_message_callback(topic=msg.topic, message=msg.payload.decode())
                    

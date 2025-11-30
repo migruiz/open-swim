@@ -8,9 +8,10 @@ class PodcastToSync(BaseModel):
     download_url: str
     title: str
     
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/podcasts')
+LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
+podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
   
-def add_podcasts_to_sync(jsonList: str) -> None:
+def set_podcasts_to_sync(jsonList: str) -> None:
     """Add a podcast to the sync list (implementation placeholder)"""
     podcasts = _convert_json_to_podcast_list(jsonList)
     _save_podcasts_to_sync(podcasts)
@@ -27,8 +28,7 @@ def _convert_json_to_podcast_list(jsonList: str) -> list[PodcastToSync]:
 def _save_podcasts_to_sync(podcasts: list[PodcastToSync]) -> None:
     """Save the list of podcasts to sync to a JSON file."""
     import json
-    podcasts_library_path = LIBRARY_PATH
     os.makedirs(podcasts_library_path, exist_ok=True)
     library_file_path = os.path.join(podcasts_library_path, "podcasts_to_sync.json")
     with open(library_file_path, "w", encoding="utf-8") as f:
-        json.dump([podcast.model_dump() for podcast in podcasts], f, default=str)
+        json.dump([podcast.model_dump() for podcast in podcasts], f, default=str, indent=2)
