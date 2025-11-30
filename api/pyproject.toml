@@ -34,7 +34,10 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 
-[dependency-groups]
+
+
+[project.optional-dependencies]
 dev = [
     "mypy>=1.18.2",
+    "types-requests>=2.31.0.20241016",
 ]
