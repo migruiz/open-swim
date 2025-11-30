@@ -35,8 +35,10 @@ class DeviceMonitor:
         self.on_disconnected = on_disconnected
         self.connected = False
         self.current_dev: Optional[str] = None
+        self._monitor_thread: Optional[threading.Thread] = None
+        self._stop_event: Optional[threading.Event] = None
         
-    def _get_block_devices(self):
+    def _get_block_devices(self) -> list[str]:
         """Returns a list of block devices like sda1, sdb1, etc."""
         devices = []
         try:
@@ -55,6 +57,7 @@ class DeviceMonitor:
             for part in output.split():
                 if part.startswith("LABEL=") or part.startswith("LABEL_FATBOOT="):
                     return part.split("=")[1].strip('"')
+            return None
         except Exception as e:
             print(f"[ERROR] Failed to get label for {dev}: {e}")
             raise e
@@ -95,9 +98,9 @@ class DeviceMonitor:
 
 
 
-    def start_monitoring(self):
+    def start_monitoring(self)-> None:
         """Start the monitoring loop in a background thread."""
-        if hasattr(self, "_monitor_thread") and self._monitor_thread.is_alive():
+        if self._monitor_thread is not None and self._monitor_thread.is_alive():
             print("[INFO] Monitoring already running.")
             return
         self._stop_event = threading.Event()
@@ -105,17 +108,17 @@ class DeviceMonitor:
         self._monitor_thread.start()
         print("[INFO] Device monitoring started in background.")
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop the background monitoring loop."""
-        if hasattr(self, "_stop_event"):
+        if self._stop_event is not None:
             self._stop_event.set()
-            if hasattr(self, "_monitor_thread"):
+            if self._monitor_thread is not None:
                 self._monitor_thread.join()
             print("[INFO] Device monitoring stopped.")
 
-    def _monitor_loop_background(self):
+    def _monitor_loop_background(self) -> None:
         """Background thread target for monitoring loop."""
-        while not self._stop_event.is_set():
+        while self._stop_event is not None and not self._stop_event.is_set():
             try:
                 self._monitor_loop()
                 time.sleep(1)
@@ -123,7 +126,7 @@ class DeviceMonitor:
                 print(f"[ERROR] Exception in monitor loop: {e}")
                 time.sleep(3)
 
-    def _monitor_loop(self):
+    def _monitor_loop(self) -> None:
         """Main monitoring loop (single iteration)."""
         #print(f"[INFO] Watching for {OPEN_SWIM_LABEL} device...")
 
