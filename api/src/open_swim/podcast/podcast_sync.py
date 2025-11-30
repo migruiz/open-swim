@@ -41,10 +41,10 @@ def sync_podcast_episodes() -> None:
             print(f"Episode {episode.id} already processed. Skipping.")
             continue
         process_podcast_episode(
-            episode=episode, episode_number=episodes.index(episode) + 1)
+            episode=episode)
 
 
-def process_podcast_episode(episode: EpisodeToSync, episode_number: int) -> None:
+def process_podcast_episode(episode: EpisodeToSync) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
     # Create a temporary directory for processing
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -68,8 +68,7 @@ def process_podcast_episode(episode: EpisodeToSync, episode_number: int) -> None
             print(f"Processing segment {index} of {total_segments}...")
 
             # Generate audio intro
-            intro_path = generate_audio_intro( episode=episode,
-                episode_number=episode_number, index=index, total=total_segments, output_dir=tmp_path)
+            intro_path = generate_audio_intro( episode=episode, index=index, total=total_segments, output_dir=tmp_path)
 
             # Merge intro and segment
             merged_path = merge_intro_and_segment(episode=episode,
@@ -170,18 +169,14 @@ def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     return segments
 
 
-def generate_audio_intro(episode: EpisodeToSync, episode_number: int, index: int, total: int, output_dir: Path) -> Path:
+def generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output_dir: Path) -> Path:
     """Generate an intro audio segment for the given index out of total segments. e.g. "1 of 5"
     Returns path to the generated audio file.
     Uses piper to generate the audio in the format: "{index}_of_{total}.mp3"
     """
-    text: str
-    if index == 1:
-        #convert episode.date to "November 5th"
-        date_str = episode.date.strftime("%B %d")
-        text = f"{date_str} episode. {index} of {total}.{episode_number}"
-    else:
-        text = f"{index} of {total}.{episode_number}"
+    #convert episode.date to "November 5th"
+    date_str = episode.date.strftime("%B %d")
+    text  = f"{date_str} episode. {index} of {total}"
     wav_output = output_dir / f"intro_{index}_of_{total}.wav"
     mp3_output = output_dir / f"intro_{index}_of_{total}.mp3"
 
