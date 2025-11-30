@@ -1,7 +1,7 @@
 import os
 from typing import List
 from open_swim.playlist_extractor import PlaylistInfo, YoutubeVideo, extract_playlist
-from open_swim.mp3_downloader import download_mp3_to_temp
+from open_swim.youtube.mp3_downloader import download_mp3_to_temp
 from open_swim.library_info import get_library_video_info, add_original_mp3_to_library, add_normalized_mp3_to_library
 from open_swim.volume_normalizer import get_normalized_loudness_file
 from open_swim.file_tools import remove_file

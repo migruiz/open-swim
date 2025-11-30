@@ -5,12 +5,14 @@ import os
 import tempfile
 import subprocess
 from pathlib import Path
+import requests
 
 
 def sync_podcast_episodes() -> None:
     """Sync multiple podcast episodes by processing each one."""
     episode_urls: List[str] = [
-        "https://dts.podtrac.com/redirect.mp3/od-cmg.streamguys1.com/sanantonio/san995/20251126100250-38-BillyMadisonShowPodcast-November262025.mp3?awCollectionId=san995-02&awGenre=Comedy&awEpisodeId=5c56a100-cae1-11f0-99fd-9d2893fba4d7",
+
+        "https://dts.podtrac.com/redirect.mp3/od-cmg.streamguys1.com/sanantonio/san995/20251124100106-38-BillyMadisonShowPodcast-November242025.mp3?awCollectionId=san995-02&awGenre=Comedy&awEpisodeId=c982fda0-c94e-11f0-a51c-0f352add0fef"
         # Add more episode URLs as needed
     ]
     for episode_url in episode_urls:
@@ -51,13 +53,13 @@ def process_podcast_episode(episode_url: str, playlist_number: int) -> None:
 def download_podcast(url: str, output_dir: Path) -> Path:
     """Download podcast from the given URL.
     Returns the path to the downloaded file."""
-    import requests
+
     
     response = requests.get(url, stream=True)
     response.raise_for_status()
     
     # Generate filename from URL or use a default
-    filename = (url.split('/')[-1] or 'podcast.mp3')[:6]
+    filename = (url.split('/')[-1] or 'podcast.mp3')[:18]
     if not filename.endswith('.mp3'):
         filename += '.mp3'
     
@@ -103,7 +105,7 @@ def generate_audio_intro(playlist_number:int, index: int, total: int, output_dir
     
     # Use piper to generate the speech (outputs WAV)
     # Note: You may need to specify a voice model path with --model
-    piper_cmd_parts = os.getenv('PIPER_PATH', 'piper').split()
+    piper_cmd_parts = os.getenv('PIPER_CMD', 'piper').split()
     piper_model = os.getenv('PIPER_VOICE_MODEL_PATH', '/voices/en_US-hfc_female-medium.onnx')
     cmd = [
         *piper_cmd_parts,
