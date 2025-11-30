@@ -1,5 +1,7 @@
 import os
-from typing import List
+import queue
+import threading
+from typing import Callable, List
 from open_swim.youtube.playlist_extractor import PlaylistInfo, YoutubeVideo, extract_playlist
 from open_swim.youtube.mp3_downloader import download_mp3_to_temp
 from open_swim.youtube.library_info import get_library_video_info, add_original_mp3_to_library, add_normalized_mp3_to_library
@@ -7,7 +9,7 @@ from open_swim.youtube.volume_normalizer import get_normalized_loudness_file
 from open_swim.file_tools import remove_file
 
 
-def get_playlist_to_sync() -> List[PlaylistInfo]:
+def _get_playlist_to_sync() -> List[PlaylistInfo]:
     """Return a list of playlist URLs to sync from environment variable."""
     playlist_ids_str = os.getenv("PLAYLIST_IDS", "")
     if not playlist_ids_str:
@@ -53,7 +55,7 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
         remove_file(temp_normalized_mp3_path)
 
 
-def sync_library_playlist(playlist_info: PlaylistInfo) -> None:
+def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
     for video in playlist_info.videos:
         try:
             _sync_video_to_library(video)
@@ -61,3 +63,33 @@ def sync_library_playlist(playlist_info: PlaylistInfo) -> None:
             print(f"[Error] Failed to sync video {video.id}: {str(e)}")
     print(
         f"[Playlist] Extracted and processed {len(playlist_info.videos)} videos from playlist.")
+    
+
+_sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
+
+
+def _sync_worker() -> None:
+    """Process playlist sync jobs sequentially."""
+    while True:
+        task = _sync_task_queue.get()
+        try:
+            task()
+        except Exception as exc:  # pragma: no cover
+            print(f"[Playlist Sync] Task failed: {exc}")
+        finally:
+            _sync_task_queue.task_done()
+
+
+threading.Thread(target=_sync_worker, daemon=True).start()
+
+
+def _sync_youtube_playlists_to_library_task() -> None:
+    """Sync all playlists specified in environment variable to the library."""
+    playlists_to_sync = _get_playlist_to_sync()
+    for playlist in playlists_to_sync:
+        print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
+        _sync_library_playlist(playlist)
+
+def sync_youtube_playlists_to_library() -> None:
+    """Enqueue playlist sync task to avoid overlapping runs."""
+    _sync_task_queue.put(_sync_youtube_playlists_to_library_task)
