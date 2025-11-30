@@ -1,5 +1,6 @@
 
 
+import shutil
 from typing import List
 import os
 import tempfile
@@ -7,7 +8,10 @@ import subprocess
 from pathlib import Path
 import requests
 from open_swim.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
+import re
 
+LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
+podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
 
 def sync_podcast_episodes() -> None:
     """Sync multiple podcast episodes by processing each one."""
@@ -45,14 +49,26 @@ def process_podcast_episode(episode: EpisodeToSync, episode_number: int) -> None
                 episode_number=episode_number, index=index, total=total_segments, output_dir=tmp_path)
 
             # Merge intro and segment
-            merged_path = merge_intro_and_segment(
-                segment_path, intro_path, tmp_path, index)
+            merged_path = merge_intro_and_segment( episode=episode,
+                segment_path=segment_path, intro_path=intro_path, output_dir=tmp_path, index=index)
             final_segments.append(merged_path)
 
+        copy_episode_segments_to_library(
+            episode=episode, segments_paths=final_segments)
         print(
             f"Processing complete! Generated {len(final_segments)} segments.")
         # Note: Files are in tmp_dir and will be cleaned up automatically
         # If you need to save them permanently, copy them before this function ends
+
+def copy_episode_segments_to_library(episode: EpisodeToSync, segments_paths: List[Path]) -> None:
+    episode_folder = episode.title + "_" + episode.id
+    episode_folder = re.sub(r'[^\w\s-]', '', episode_folder )
+    episode_folder = re.sub(r'[\s]+', '_', episode_folder.strip())
+    episode_dir = Path(podcasts_library_path) / episode_folder
+    episode_dir.mkdir(parents=True, exist_ok=True)
+    for segment_path in segments_paths:
+        destination = episode_dir / segment_path.name
+        shutil.copy2(segment_path, destination)
 
 
 def download_podcast(url: str, output_dir: Path) -> Path:
@@ -138,13 +154,17 @@ def generate_audio_intro(episode_number: int, index: int, total: int, output_dir
     return mp3_output
 
 
-def merge_intro_and_segment(segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
+def merge_intro_and_segment(episode: EpisodeToSync,segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
     """Merge intro audio and segment into a single audio file with 1 second silence between them.
     Returns path to the merged file."""
-    output_path = output_dir / f"final_segment_{index:03d}.mp3"
+    # Sanitize the episode title to remove special characters for the filename
+        # Sanitize title to remove special characters
+    sanitized_title = re.sub(r'[^\w\s-]', '', episode.title)
+    sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
+    output_path = output_dir / f"{sanitized_title}_{episode.id}_{index:03d}.mp3"
 
     # Generate 0.5 second of silence
-    silence_path = output_dir / f"silence_{index}.mp3"
+    silence_path = output_dir / f"silence_{episode.id}_{index}.mp3"
     ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     silence_cmd = [
         ffmpeg_cmd,
