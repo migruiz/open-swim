@@ -6,7 +6,7 @@ from open_swim.youtube.playlist_library_sync import sync_library_playlist, get_p
 from open_swim.youtube.device_library_sync import sync_with_device
 from dotenv import load_dotenv
 from open_swim.podcast.podcast_sync import sync_podcast_episodes
-from open_swim.podcast.podcasts_to_sync import set_podcasts_to_sync
+from open_swim.podcast.episodes_to_sync import set_podcasts_to_sync
 import threading
 
 load_dotenv()

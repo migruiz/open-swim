@@ -1,0 +1,43 @@
+import os
+from pydantic import BaseModel
+from datetime import datetime
+
+class EpisodeToSync(BaseModel):
+    id: str
+    date: datetime
+    download_url: str
+    title: str
+    
+LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
+podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
+  
+def set_episodes_to_sync(jsonList: str) -> None:
+    """Add a podcast to the sync list (implementation placeholder)"""
+    episodes = _convert_json_to_episode_list(jsonList)
+    _save_episodes_to_sync(episodes)
+
+def _convert_json_to_episode_list(jsonList: str) -> list[EpisodeToSync]:
+    """Convert JSON string to a list of EpisodeToSync objects."""
+    import json
+    data = json.loads(jsonList)
+    episode_list = [EpisodeToSync(**item) for item in data]
+    return episode_list
+
+
+def _save_episodes_to_sync(episodes: list[EpisodeToSync]) -> None:
+    """Save the list of episodes to sync to a JSON file."""
+    import json
+    os.makedirs(podcasts_library_path, exist_ok=True)
+    library_file_path = os.path.join(podcasts_library_path, "episodes_to_sync.json")
+    with open(library_file_path, "w", encoding="utf-8") as f:
+        json.dump([episode.model_dump() for episode in episodes], f, default=str, indent=2)
+
+def load_episodes_to_sync() -> list[EpisodeToSync]:
+    """Load the list of episodes to sync from a JSON file."""
+    import json
+    library_file_path = os.path.join(podcasts_library_path, "episodes_to_sync.json")
+    if os.path.exists(library_file_path):
+        with open(library_file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return [EpisodeToSync(**item) for item in data]
+    return []
