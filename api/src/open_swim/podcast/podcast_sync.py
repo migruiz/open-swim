@@ -21,17 +21,16 @@ class EpisodeMp3Info(BaseModel):
 
 class LibraryData(BaseModel):
     episodes: Dict[str, EpisodeMp3Info]
+
     @classmethod
     def from_dict(cls, episodes: dict) -> "LibraryData":
         """Parse the JSON structure where keys are the episode IDs"""
         return cls(episodes=episodes)
 
 
-
-
-
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
+
 
 def sync_podcast_episodes() -> None:
     """Sync multiple podcast episodes by processing each one."""
@@ -69,18 +68,18 @@ def process_podcast_episode(episode: EpisodeToSync, episode_number: int) -> None
             print(f"Processing segment {index} of {total_segments}...")
 
             # Generate audio intro
-            intro_path = generate_audio_intro(
+            intro_path = generate_audio_intro( episode=episode,
                 episode_number=episode_number, index=index, total=total_segments, output_dir=tmp_path)
 
             # Merge intro and segment
-            merged_path = merge_intro_and_segment( episode=episode,
-                segment_path=segment_path, intro_path=intro_path, output_dir=tmp_path, index=index)
+            merged_path = merge_intro_and_segment(episode=episode,
+                                                  segment_path=segment_path, intro_path=intro_path, output_dir=tmp_path, index=index)
             final_segments.append(merged_path)
 
         episode_dir = _get_episode_directory(episode)
         copy_episode_segments_to_library(
             episode_dir=episode_dir, segments_paths=final_segments)
-        
+
         library_info = _load_library_info()
         library_info.episodes[episode.id] = EpisodeMp3Info(
             id=episode.id,
@@ -91,9 +90,10 @@ def process_podcast_episode(episode: EpisodeToSync, episode_number: int) -> None
         print(
             f"Processing complete! Generated {len(final_segments)} segments.")
 
+
 def _get_episode_directory(episode: EpisodeToSync) -> Path:
     episode_folder = episode.title + "_" + episode.id
-    episode_folder = re.sub(r'[^\w\s-]', '', episode_folder )
+    episode_folder = re.sub(r'[^\w\s-]', '', episode_folder)
     episode_folder = re.sub(r'[\s]+', '_', episode_folder.strip())
     episode_dir = Path(podcasts_library_path) / episode_folder
     return episode_dir
@@ -104,6 +104,7 @@ def _save_library_info(library_data: LibraryData) -> None:
     with open(info_json_path, "w", encoding="utf-8") as f:
         json.dump(library_data.model_dump(), f, indent=2)
     print(f"[Info JSON] Saved library info to {info_json_path}")
+
 
 def _load_library_info() -> LibraryData:
     info_json_path = os.path.join(podcasts_library_path, "info.json")
@@ -169,12 +170,18 @@ def split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     return segments
 
 
-def generate_audio_intro(episode_number: int, index: int, total: int, output_dir: Path) -> Path:
+def generate_audio_intro(episode: EpisodeToSync, episode_number: int, index: int, total: int, output_dir: Path) -> Path:
     """Generate an intro audio segment for the given index out of total segments. e.g. "1 of 5"
     Returns path to the generated audio file.
     Uses piper to generate the audio in the format: "{index}_of_{total}.mp3"
     """
-    text = f"{index} of {total}.{episode_number}"
+    text: str
+    if index == 1:
+        #convert episode.date to "November 5th"
+        date_str = episode.date.strftime("%B %d")
+        text = f"{date_str} episode. {index} of {total}.{episode_number}"
+    else:
+        text = f"{index} of {total}.{episode_number}"
     wav_output = output_dir / f"intro_{index}_of_{total}.wav"
     mp3_output = output_dir / f"intro_{index}_of_{total}.mp3"
 
@@ -207,14 +214,15 @@ def generate_audio_intro(episode_number: int, index: int, total: int, output_dir
     return mp3_output
 
 
-def merge_intro_and_segment(episode: EpisodeToSync,segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
+def merge_intro_and_segment(episode: EpisodeToSync, segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
     """Merge intro audio and segment into a single audio file with 1 second silence between them.
     Returns path to the merged file."""
     # Sanitize the episode title to remove special characters for the filename
-        # Sanitize title to remove special characters
+    # Sanitize title to remove special characters
     sanitized_title = re.sub(r'[^\w\s-]', '', episode.title)
     sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
-    output_path = output_dir / f"{sanitized_title}_{episode.id}_{index:03d}.mp3"
+    output_path = output_dir / \
+        f"{sanitized_title}_{episode.id}_{index:03d}.mp3"
 
     # Generate 0.5 second of silence
     silence_path = output_dir / f"silence_{episode.id}_{index}.mp3"
