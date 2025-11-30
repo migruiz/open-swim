@@ -5,7 +5,7 @@ import shutil
 from pydantic import BaseModel
 from typing import Dict
 
-from open_swim.playlist_extractor import YoutubeVideo
+from open_swim.youtube.playlist_extractor import YoutubeVideo
 
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library/youtube')
 

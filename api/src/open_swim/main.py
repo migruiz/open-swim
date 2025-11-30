@@ -2,10 +2,10 @@ import json
 import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-from open_swim.playlist_library_sync import sync_library_playlist, get_playlist_to_sync
-from open_swim.device_library_sync import sync_with_device
+from open_swim.youtube.playlist_library_sync import sync_library_playlist, get_playlist_to_sync
+from open_swim.youtube.device_library_sync import sync_with_device
 from dotenv import load_dotenv
-from open_swim.podcast_sync import sync_podcast_episodes
+from open_swim.podcast.podcast_sync import sync_podcast_episodes
 import threading
 
 load_dotenv()
@@ -20,14 +20,6 @@ def main() -> None:
     # Set up MQTT connection callback
 
     def on_mqtt_connected() -> None:
-        """Subscribe to test topic when connected. Also extract and publish playlist details."""
-        print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        mqtt_client.subscribe("test/topic")
-        threading.Thread(
-            target=sync_podcast_episodes,
-            daemon=True
-        ).start()
-        return
         playlists_to_sync = get_playlist_to_sync()
         for playlist in playlists_to_sync:
             print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
