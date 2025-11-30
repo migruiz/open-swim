@@ -176,7 +176,7 @@ def generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output_
     """
     #convert episode.date to "November 5th"
     date_str = episode.date.strftime("%B %d")
-    text  = f"{date_str} episode. {index} of {total}"
+    text  = f"{date_str}. {index} of {total}"
     wav_output = output_dir / f"intro_{index}_of_{total}.wav"
     mp3_output = output_dir / f"intro_{index}_of_{total}.mp3"
 
