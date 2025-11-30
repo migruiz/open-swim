@@ -4,6 +4,7 @@ from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
 from open_swim.youtube.playlist_library_sync import sync_youtube_playlists_to_library
 from open_swim.youtube.device_library_sync import sync_with_device
+from open_swim.youtube.playlist_to_sync import set_playlists_to_sync
 from dotenv import load_dotenv
 from open_swim.podcast.podcast_sync import sync_podcast_episodes
 from open_swim.podcast.episodes_to_sync import set_episodes_to_sync
@@ -22,16 +23,19 @@ def main() -> None:
 
     def on_mqtt_connected() -> None:
         mqtt_client.subscribe("openswim/episodes_to_sync")
+        mqtt_client.subscribe("openswim/playlists_to_sync")
         sync_podcast_episodes()
         sync_youtube_playlists_to_library()
-        return
 
 
     def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""
         print(f"[MQTT] Message received on topic '{topic}': {message}")
-        if topic=='openswim/episodes_to_sync':
-            set_episodes_to_sync(message)
+        match topic:
+            case 'openswim/episodes_to_sync':
+                set_episodes_to_sync(message)
+            case 'openswim/playlists_to_sync':
+                set_playlists_to_sync(message)
 
     # Create MQTT client
     mqtt_client = MQTTClient(

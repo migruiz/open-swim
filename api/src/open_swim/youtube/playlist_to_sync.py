@@ -4,8 +4,8 @@ from datetime import datetime
 
 class PlaylistToSync(BaseModel):
     id: str    
-    playlist_url: str
-    title: str
+    #playlist_url: str
+    #title: str
     
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")

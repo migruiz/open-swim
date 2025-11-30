@@ -7,16 +7,15 @@ from open_swim.youtube.mp3_downloader import download_mp3_to_temp
 from open_swim.youtube.library_info import get_library_video_info, add_original_mp3_to_library, add_normalized_mp3_to_library
 from open_swim.youtube.volume_normalizer import get_normalized_loudness_file
 from open_swim.file_tools import remove_file
+from open_swim.youtube.playlist_to_sync import  load_playlists_to_sync
 
 
 def _get_playlist_to_sync() -> List[PlaylistInfo]:
     """Return a list of playlist URLs to sync from environment variable."""
-    playlist_ids_str = os.getenv("PLAYLIST_IDS", "")
-    if not playlist_ids_str:
-        return []
+    playlists_to_sync = load_playlists_to_sync()
 
-    playlist_ids = [id.strip()
-                    for id in playlist_ids_str.split(",") if id.strip()]
+    playlist_ids = [playlist.id.strip()
+                    for playlist in playlists_to_sync]
     playlist_urls = [
         f"https://youtube.com/playlist?list={playlist_id}" for playlist_id in playlist_ids]
     return [extract_playlist(url) for url in playlist_urls]
