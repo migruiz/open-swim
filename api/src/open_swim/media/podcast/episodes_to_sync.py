@@ -1,29 +1,17 @@
+
+from datetime import datetime
 import os
 from pydantic import BaseModel
-from datetime import datetime
 
 class EpisodeToSync(BaseModel):
     id: str
     date: datetime
     download_url: str
     title: str
-    
+
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
-  
-def set_episodes_to_sync(jsonList: str) -> None:
-    """Add a podcast to the sync list (implementation placeholder)"""
-    episodes = _convert_json_to_episode_list(jsonList)
-    _save_episodes_to_sync(episodes)
-
-def _convert_json_to_episode_list(jsonList: str) -> list[EpisodeToSync]:
-    """Convert JSON string to a list of EpisodeToSync objects."""
-    import json
-    data = json.loads(jsonList)
-    episode_list = [EpisodeToSync(**item) for item in data]
-    return episode_list
-
-
+    
 def _save_episodes_to_sync(episodes: list[EpisodeToSync]) -> None:
     """Save the list of episodes to sync to a JSON file."""
     import json
@@ -41,3 +29,15 @@ def load_episodes_to_sync() -> list[EpisodeToSync]:
             data = json.load(f)
             return [EpisodeToSync(**item) for item in data]
     return []
+
+def update_episodes_to_sync(json_payload: str) -> None:
+    """Persist requested episodes to sync."""
+    episodes = _convert_json_to_episode_list(json_payload)
+    _save_episodes_to_sync(episodes)
+
+def _convert_json_to_episode_list(json_payload: str) -> list[EpisodeToSync]:
+    """Convert JSON string to a list of EpisodeToSync objects."""
+    import json
+    data = json.loads(json_payload)
+    episode_list = [EpisodeToSync(**item) for item in data]
+    return episode_list
