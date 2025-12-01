@@ -6,8 +6,7 @@ from dotenv import load_dotenv
 
 from open_swim.device.monitor import DeviceMonitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
-from open_swim.media.podcast.sync import enqueue_episode_sync
-from open_swim.media.youtube.library_sync import enqueue_playlist_library_sync
+from open_swim.sync import enqueue_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
 from open_swim.messaging.mqtt import MqttClient
 
@@ -48,8 +47,7 @@ def run() -> None:
 def _on_mqtt_connected(mqtt_client: MqttClient) -> None:
     mqtt_client.subscribe("openswim/episodes_to_sync")
     mqtt_client.subscribe("openswim/playlists_to_sync")
-    enqueue_episode_sync()
-    enqueue_playlist_library_sync()
+    enqueue_sync()
 
 
 def _on_mqtt_message(topic: str, message: Any, mqtt_client: MqttClient) -> None:

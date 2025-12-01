@@ -32,33 +32,16 @@ class LibraryData(BaseModel):
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
 
-_sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
 
 
-def _sync_worker() -> None:
-    """Process sync jobs sequentially to avoid concurrent runs."""
-    while True:
-        task = _sync_task_queue.get()
-        try:
-            task()
-        except Exception as exc:  # pragma: no cover - best effort logging only
-            print(f"Podcast sync task failed: {exc}")
-        finally:
-            _sync_task_queue.task_done()
-
-
-threading.Thread(target=_sync_worker, daemon=True).start()
-
-def _sync_podcast_episodes_task() -> None:
+def sync_podcast_episodes() -> None:
     """Sync multiple podcast episodes by processing each one."""
     episodes = load_episodes_to_sync()
     for episode in episodes:        
         _process_podcast_episode(
             episode=episode)
 
-def enqueue_episode_sync() -> None:
-    """Enqueue a sync job so only one runs at a time."""
-    _sync_task_queue.put(_sync_podcast_episodes_task)
+
 
 
 def _process_podcast_episode(episode: EpisodeToSync) -> None:

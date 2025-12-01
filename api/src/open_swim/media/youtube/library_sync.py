@@ -1,8 +1,6 @@
 from pathlib import Path
-import queue
 import tempfile
-import threading
-from typing import Callable, List
+from typing import  List
 
 from open_swim.media.youtube.download import download_audio
 from open_swim.media.youtube.library import (
@@ -32,6 +30,7 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
         print(
             f"[Library Info] Video {video.title} - {video.id} already in library.")
     else:
+        print(f"[Library Sync] Processing video {video.title} - {video.id}...")
             # Create a temporary directory for processing
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -56,31 +55,14 @@ def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
         f"[Playlist] Extracted and processed {len(playlist_info.videos)} videos from playlist.")
     
 
-_sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
 
 
-def _sync_worker() -> None:
-    """Process playlist sync jobs sequentially."""
-    while True:
-        task = _sync_task_queue.get()
-        try:
-            task()
-        except Exception as exc:  # pragma: no cover
-            print(f"[Playlist Sync] Task failed: {exc}")
-        finally:
-            _sync_task_queue.task_done()
 
-
-threading.Thread(target=_sync_worker, daemon=True).start()
-
-
-def _sync_youtube_playlists_to_library_task() -> None:
+def sync_youtube_playlists_to_library() -> None:
     """Sync all playlists specified in environment variable to the library."""
     playlists_to_sync = _get_playlists_to_sync()
     for playlist in playlists_to_sync:
         print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
         _sync_library_playlist(playlist)
 
-def enqueue_playlist_library_sync() -> None:
-    """Enqueue playlist sync task to avoid overlapping runs."""
-    _sync_task_queue.put(_sync_youtube_playlists_to_library_task)
+
