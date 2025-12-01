@@ -11,7 +11,7 @@ from typing import Callable, Dict, List
 import requests
 from pydantic import BaseModel
 
-from open_swim.media.podcast.episode_processor import prepare_episode_segments
+from open_swim.media.podcast.episode_processor import get_episode_segments
 from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
 
 class EpisodeMp3Info(BaseModel):
@@ -77,13 +77,13 @@ def _process_podcast_episode(episode: EpisodeToSync) -> None:
         episode_path = _download_podcast(
             url=episode.download_url, output_dir=tmp_path)
 
-        final_segments = prepare_episode_segments(
+        final_segments = get_episode_segments(
             episode=episode,
             episode_path=episode_path,
             tmp_path=tmp_path,
         )
 
-        episode_dir = _get_episode_directory(episode)
+        episode_dir = _get_library_episode_directory(episode)
         _copy_episode_segments_to_library(
             episode_dir=episode_dir, segments_paths=final_segments)
         
@@ -97,7 +97,7 @@ def _process_podcast_episode(episode: EpisodeToSync) -> None:
             f"Processing complete! Generated {len(final_segments)} segments.")
 
 
-def _get_episode_directory(episode: EpisodeToSync) -> Path:
+def _get_library_episode_directory(episode: EpisodeToSync) -> Path:
     episode_folder = episode.title + "_" + episode.id
     episode_folder = re.sub(r'[^\w\s-]', '', episode_folder)
     episode_folder = re.sub(r'[\s]+', '_', episode_folder.strip())

@@ -16,7 +16,7 @@ podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
 
 
 
-def prepare_episode_segments(episode: EpisodeToSync, episode_path: Path, tmp_path: Path) -> List[Path]:
+def get_episode_segments(episode: EpisodeToSync, episode_path: Path, tmp_path: Path) -> List[Path]:
     """Split a podcast episode, generate intros, and merge segments."""
     print("Splitting podcast into 10-minute segments...")
     segment_paths = _split_podcast_episode(episode_path=episode_path, output_dir=tmp_path)
