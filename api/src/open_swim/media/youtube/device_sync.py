@@ -84,20 +84,20 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
             video_info = library_info.videos[video_id]
             
             # Check if normalized mp3 exists
-            if not video_info.normalized_mp3_path:
+            if not video_info.mp3_path:
                 print(f"[Device Sync] No normalized MP3 for video {video_id} ({video.title}), skipping")
                 continue
             
-            if not os.path.exists(video_info.normalized_mp3_path):
-                print(f"[Device Sync] Normalized MP3 file does not exist: {video_info.normalized_mp3_path}, skipping")
+            if not os.path.exists(video_info.mp3_path):
+                print(f"[Device Sync] Normalized MP3 file does not exist: {video_info.mp3_path}, skipping")
                 continue
             
             # Copy the file to the device playlist folder
-            filename = os.path.basename(video_info.normalized_mp3_path)
+            filename = os.path.basename(video_info.mp3_path)
             destination_path = os.path.join(playlist_folder_path, filename)
             
             try:
-                shutil.copy2(video_info.normalized_mp3_path, destination_path)
+                shutil.copy2(video_info.mp3_path, destination_path)
                 print(f"[Device Sync] Copied: {filename} -> {playlist_title}/")
             except Exception as e:
                 print(f"[Device Sync] Error copying {filename}: {e}")
