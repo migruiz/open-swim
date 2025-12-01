@@ -90,10 +90,11 @@ def _save_library_info(library_data: LibraryData) -> None:
 
 def add_normalized_mp3_to_library(youtube_video: YoutubeVideo, temp_normalized_mp3_path: str) -> None:
     normalized_mp3_file_library_path = _save_normalized_file_to_library(
-        temp_normalized_mp3_path=temp_normalized_mp3_path, youtube_video=youtube_video)
-    video_info = get_library_video_info(youtube_video.id)
-    assert video_info is not None, f"Video {youtube_video.id} must exist in library before adding normalized MP3"
-    video_info.mp3_path = normalized_mp3_file_library_path
+        temp_normalized_mp3_path=temp_normalized_mp3_path, youtube_video=youtube_video) 
     library_data = load_library_info()
-    library_data.videos[youtube_video.id] = video_info
+    library_data.videos[youtube_video.id] = LibraryMp3Info(
+        video_id=youtube_video.id,
+        title=youtube_video.title,
+        mp3_path=normalized_mp3_file_library_path
+    )
     _save_library_info(library_data)
