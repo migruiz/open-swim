@@ -18,19 +18,11 @@ load_dotenv()
 def run() -> None:
     print("Open Swim running. Hello arm64 world!")
 
-    mqtt_client: MqttClient | None = None
-
-    def _handle_connect() -> None:
-        assert mqtt_client is not None
-        _on_mqtt_connected(mqtt_client)
-
-    def _handle_message(topic: str, message: Any) -> None:
-        assert mqtt_client is not None
-        _on_mqtt_message(topic, message, mqtt_client)
-
-    mqtt_client = MqttClient(
-        on_connect_callback=_handle_connect,
-        on_message_callback=_handle_message,
+    mqtt_client: MqttClient = MqttClient(
+        on_connect_callback=lambda: _on_mqtt_connected(mqtt_client),
+        on_message_callback=lambda topic, message: _on_mqtt_message(
+            topic, message, mqtt_client
+        ),
     )
 
     device_monitor = DeviceMonitor(
