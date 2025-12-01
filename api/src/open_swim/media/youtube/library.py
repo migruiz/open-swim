@@ -2,10 +2,11 @@ import json
 import os
 import re
 import shutil
-from pydantic import BaseModel
 from typing import Dict
 
-from open_swim.youtube.playlist_extractor import YoutubeVideo
+from pydantic import BaseModel
+
+from open_swim.media.youtube.playlists import YoutubeVideo
 
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")

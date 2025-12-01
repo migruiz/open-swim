@@ -1,6 +1,5 @@
 import os
 from pydantic import BaseModel
-from datetime import datetime
 
 class PlaylistToSync(BaseModel):
     id: str    
@@ -10,15 +9,15 @@ class PlaylistToSync(BaseModel):
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
 youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")
   
-def set_playlists_to_sync(jsonList: str) -> None:
-    """Add a playlist to the sync list (implementation placeholder)"""
-    playlists = _convert_json_to_playlist_list(jsonList)
+def update_playlists_to_sync(json_payload: str) -> None:
+    """Persist the requested playlists to sync."""
+    playlists = _convert_json_to_playlist_list(json_payload)
     _save_playlists_to_sync(playlists)
 
-def _convert_json_to_playlist_list(jsonList: str) -> list[PlaylistToSync]:
+def _convert_json_to_playlist_list(json_payload: str) -> list[PlaylistToSync]:
     """Convert JSON string to a list of PlaylistToSync objects."""
     import json
-    data = json.loads(jsonList)
+    data = json.loads(json_payload)
     playlist_list = [PlaylistToSync(**item) for item in data]
     return playlist_list
 

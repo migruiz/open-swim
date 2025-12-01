@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-open-swim = "open_swim.main:main"
+open-swim = "open_swim.app:run"
 
 [tool.uv]
 # uv-specific configuration (optional tweaks)

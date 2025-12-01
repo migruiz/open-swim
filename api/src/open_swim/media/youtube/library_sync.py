@@ -1,16 +1,20 @@
-import os
 import queue
 import threading
 from typing import Callable, List
-from open_swim.youtube.playlist_extractor import PlaylistInfo, YoutubeVideo, extract_playlist
-from open_swim.youtube.mp3_downloader import download_mp3_to_temp
-from open_swim.youtube.library_info import get_library_video_info, add_original_mp3_to_library, add_normalized_mp3_to_library
-from open_swim.youtube.volume_normalizer import get_normalized_loudness_file
-from open_swim.file_tools import remove_file
-from open_swim.youtube.playlist_to_sync import  load_playlists_to_sync
+
+from open_swim.media.youtube.download import download_audio
+from open_swim.media.youtube.library import (
+    add_normalized_mp3_to_library,
+    add_original_mp3_to_library,
+    get_library_video_info,
+)
+from open_swim.media.youtube.normalize import get_normalized_loudness_file
+from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_playlist
+from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
+from open_swim.storage.file_ops import delete_path
 
 
-def _get_playlist_to_sync() -> List[PlaylistInfo]:
+def _get_playlists_to_sync() -> List[PlaylistInfo]:
     """Return a list of playlist URLs to sync from environment variable."""
     playlists_to_sync = load_playlists_to_sync()
 
@@ -18,7 +22,7 @@ def _get_playlist_to_sync() -> List[PlaylistInfo]:
                     for playlist in playlists_to_sync]
     playlist_urls = [
         f"https://youtube.com/playlist?list={playlist_id}" for playlist_id in playlist_ids]
-    return [extract_playlist(url) for url in playlist_urls]
+    return [fetch_playlist(url) for url in playlist_urls]
 
 
 def _sync_video_to_library(video: YoutubeVideo) -> None:
@@ -35,15 +39,14 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
                 youtube_video=video,
                 temp_normalized_mp3_path=temp_normalized_mp3_path
             )
-            remove_file(temp_normalized_mp3_path)
+            delete_path(temp_normalized_mp3_path)
     else:
-        temp_downloaded_mp3_path = download_mp3_to_temp(
-            video_id=video.id)
+        temp_downloaded_mp3_path = download_audio(video_id=video.id)
         original_mp3_path = add_original_mp3_to_library(
             youtube_video=video,
             temp_downloaded_mp3_path=temp_downloaded_mp3_path
         )
-        remove_file(temp_downloaded_mp3_path)
+        delete_path(temp_downloaded_mp3_path)
         temp_normalized_mp3_path = get_normalized_loudness_file(
             mp3_file_path=original_mp3_path
         )
@@ -51,7 +54,7 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
             youtube_video=video,
             temp_normalized_mp3_path=temp_normalized_mp3_path
         )
-        remove_file(temp_normalized_mp3_path)
+        delete_path(temp_normalized_mp3_path)
 
 
 def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
@@ -84,11 +87,11 @@ threading.Thread(target=_sync_worker, daemon=True).start()
 
 def _sync_youtube_playlists_to_library_task() -> None:
     """Sync all playlists specified in environment variable to the library."""
-    playlists_to_sync = _get_playlist_to_sync()
+    playlists_to_sync = _get_playlists_to_sync()
     for playlist in playlists_to_sync:
         print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
         _sync_library_playlist(playlist)
 
-def sync_youtube_playlists_to_library() -> None:
+def enqueue_playlist_library_sync() -> None:
     """Enqueue playlist sync task to avoid overlapping runs."""
     _sync_task_queue.put(_sync_youtube_playlists_to_library_task)

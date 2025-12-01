@@ -1,18 +1,18 @@
-
-
 import json
 import shutil
-from typing import Callable, Dict, List
 import os
-import tempfile
 import subprocess
+import tempfile
 from pathlib import Path
-from pydantic import BaseModel
-import requests
-from open_swim.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
 import re
 import queue
 import threading
+from typing import Callable, Dict, List
+
+import requests
+from pydantic import BaseModel
+
+from open_swim.media.podcast.episodes import EpisodeToSync, load_episodes_to_sync
 
 
 class EpisodeMp3Info(BaseModel):
@@ -61,7 +61,7 @@ def _sync_podcast_episodes_task() -> None:
         process_podcast_episode(
             episode=episode)
 
-def sync_podcast_episodes() -> None:
+def enqueue_episode_sync() -> None:
     """Enqueue a sync job so only one runs at a time."""
     _sync_task_queue.put(_sync_podcast_episodes_task)
 
