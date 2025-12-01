@@ -11,8 +11,8 @@ from typing import Callable, Dict, List
 import requests
 from pydantic import BaseModel
 
-from open_swim.media.podcast.episodes import EpisodeToSync, load_episodes_to_sync, prepare_episode_segments
-
+from open_swim.media.podcast.episode_processor import prepare_episode_segments
+from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
 
 class EpisodeMp3Info(BaseModel):
     id: str
@@ -52,11 +52,7 @@ threading.Thread(target=_sync_worker, daemon=True).start()
 def _sync_podcast_episodes_task() -> None:
     """Sync multiple podcast episodes by processing each one."""
     episodes = load_episodes_to_sync()
-    for episode in episodes:
-        library_info = _load_library_info()
-        if episode.id in library_info.episodes:
-            print(f"Episode {episode.id} already processed. Skipping.")
-            continue
+    for episode in episodes:        
         _process_podcast_episode(
             episode=episode)
 
@@ -67,6 +63,11 @@ def enqueue_episode_sync() -> None:
 
 def _process_podcast_episode(episode: EpisodeToSync) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
+    library_info = _load_library_info()
+    if episode.id in library_info.episodes:
+        print(f"Episode {episode.id} already processed. Skipping.")
+        return
+    
     # Create a temporary directory for processing
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
@@ -85,8 +86,7 @@ def _process_podcast_episode(episode: EpisodeToSync) -> None:
         episode_dir = _get_episode_directory(episode)
         _copy_episode_segments_to_library(
             episode_dir=episode_dir, segments_paths=final_segments)
-
-        library_info = _load_library_info()
+        
         library_info.episodes[episode.id] = EpisodeMp3Info(
             id=episode.id,
             title=episode.title,
