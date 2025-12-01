@@ -1,4 +1,6 @@
+from pathlib import Path
 import queue
+import tempfile
 import threading
 from typing import Callable, List
 
@@ -10,7 +12,6 @@ from open_swim.media.youtube.library import (
 from open_swim.media.youtube.normalize import get_normalized_loudness_file
 from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_playlist
 from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
-from open_swim.storage.file_ops import delete_path
 
 
 def _get_playlists_to_sync() -> List[PlaylistInfo]:
@@ -31,15 +32,18 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
         print(
             f"[Library Info] Video {video.title} - {video.id} already in library.")
     else:
-        temp_downloaded_mp3_path = download_audio(video_id=video.id)
-        temp_normalized_mp3_path = get_normalized_loudness_file(
-            mp3_file_path=temp_downloaded_mp3_path
-        )
-        add_normalized_mp3_to_library(
-            youtube_video=video,
-            temp_normalized_mp3_path=temp_normalized_mp3_path
-        )
-        delete_path(temp_normalized_mp3_path)
+            # Create a temporary directory for processing
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            temp_downloaded_mp3_path = download_audio(tmp_path=tmp_path, video_id=video.id)
+            temp_normalized_mp3_path = get_normalized_loudness_file(
+                tmp_path=tmp_path,
+                mp3_file_path=temp_downloaded_mp3_path
+            )
+            add_normalized_mp3_to_library(
+                youtube_video=video,
+                temp_normalized_mp3_path=temp_normalized_mp3_path
+            )
 
 
 def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:

@@ -42,23 +42,7 @@ def load_library_info() -> LibraryData:
         return LibraryData(videos={})
 
 
-def _save_original_file_to_library(temp_downloaded_mp3_path: str, youtube_video: YoutubeVideo) -> str:
-    # Ensure /library/ directory exists
-    os.makedirs(youtube_library_path, exist_ok=True)
 
-    # Sanitize title to remove special characters
-    sanitized_title = re.sub(r'[^\w\s-]', '', youtube_video.title)
-    sanitized_title = re.sub(r'[\s]+', '_', sanitized_title.strip())
-    
-    # Create filename in format: [title]__original__[videoId].mp3
-    filename = f"{sanitized_title}__original__{youtube_video.id}.mp3"
-    destination_path = os.path.join(youtube_library_path, filename)
-    
-    # Copy the downloaded MP3 file to /library/
-    shutil.copy2(temp_downloaded_mp3_path, destination_path)
-    print(f"[File Copy] Original MP3 copied to {destination_path}")
-
-    return destination_path
 
 
 def _save_normalized_file_to_library(temp_normalized_mp3_path: str, youtube_video: YoutubeVideo) -> str:

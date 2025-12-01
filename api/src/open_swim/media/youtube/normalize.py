@@ -1,10 +1,11 @@
 
 import os
+from pathlib import Path
 import secrets
 import subprocess
 
 
-def get_normalized_loudness_file(mp3_file_path: str) -> str:
+def get_normalized_loudness_file(tmp_path: Path, mp3_file_path: str) -> str:
     """
     A downloded MP3 file is normalized using ffmpeg's loudnorm filter to use in Open Swim  audio playback. bitrate is set to 128k. 
     The normalized file is saved in a temp directory and the path to the normalized file is returned.  
@@ -17,12 +18,11 @@ def get_normalized_loudness_file(mp3_file_path: str) -> str:
     temp_filename = f"{secrets.token_hex(16)}.mp3"
     output_path = os.path.join(output_dir, temp_filename)
     """
-    # Set output directory
-    output_dir = '/tmp' if os.name != 'nt' else os.environ.get('TEMP', '.')
+  
     
     # Generate random temp filename
     temp_filename = f"{secrets.token_hex(16)}.mp3"
-    output_path = os.path.join(output_dir, temp_filename)
+    output_path = tmp_path / temp_filename
     
     # Build ffmpeg command with loudnorm filter and 128k bitrate
     print(f"Normalizing loudness for file: {mp3_file_path}")
@@ -33,7 +33,7 @@ def get_normalized_loudness_file(mp3_file_path: str) -> str:
         '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11',
         '-b:a', '128k',
         '-y',  # Overwrite output file if it exists
-        output_path
+        str(output_path)
     ]
     
     # Execute ffmpeg command
@@ -42,6 +42,6 @@ def get_normalized_loudness_file(mp3_file_path: str) -> str:
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
     
-    return output_path 
+    return str(output_path) 
 
 
