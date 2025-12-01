@@ -13,11 +13,7 @@ youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")
 
 class LibraryMp3Info(BaseModel):
     video_id: str
-    original_mp3_path: str
-    original_mp3_downloaded: bool = False
-    
-    normalized_mp3_path: str | None = None
-    normalized_mp3_converted: bool = False
+    mp3_path: str
     title: str
 
 
@@ -90,28 +86,14 @@ def _save_library_info(library_data: LibraryData) -> None:
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
-def add_original_mp3_to_library(youtube_video: YoutubeVideo, temp_downloaded_mp3_path: str) -> str:
-    original_mp3_file_library_path = _save_original_file_to_library(
-        temp_downloaded_mp3_path=temp_downloaded_mp3_path, youtube_video=youtube_video)
-    
-    video_info = LibraryMp3Info(
-        video_id=youtube_video.id,
-        title=youtube_video.title,
-        original_mp3_path=original_mp3_file_library_path,
-        original_mp3_downloaded=True
-    )
-    library_data = load_library_info()
-    library_data.videos[youtube_video.id] = video_info
-    _save_library_info(library_data)
-    return original_mp3_file_library_path
+
 
 def add_normalized_mp3_to_library(youtube_video: YoutubeVideo, temp_normalized_mp3_path: str) -> None:
     normalized_mp3_file_library_path = _save_normalized_file_to_library(
         temp_normalized_mp3_path=temp_normalized_mp3_path, youtube_video=youtube_video)
     video_info = get_library_video_info(youtube_video.id)
     assert video_info is not None, f"Video {youtube_video.id} must exist in library before adding normalized MP3"
-    video_info.normalized_mp3_path = normalized_mp3_file_library_path
-    video_info.normalized_mp3_converted = True
+    video_info.mp3_path = normalized_mp3_file_library_path
     library_data = load_library_info()
     library_data.videos[youtube_video.id] = video_info
     _save_library_info(library_data)

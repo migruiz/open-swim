@@ -5,7 +5,6 @@ from typing import Callable, List
 from open_swim.media.youtube.download import download_audio
 from open_swim.media.youtube.library import (
     add_normalized_mp3_to_library,
-    add_original_mp3_to_library,
     get_library_video_info,
 )
 from open_swim.media.youtube.normalize import get_normalized_loudness_file
@@ -30,25 +29,11 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
     library_video_info = get_library_video_info(video.id)
     if library_video_info:
         print(
-            f"[Library Info] Video ID {video.id} already in library.")
-        if (not library_video_info.normalized_mp3_converted):
-            temp_normalized_mp3_path = get_normalized_loudness_file(
-                mp3_file_path=library_video_info.original_mp3_path
-            )
-            add_normalized_mp3_to_library(
-                youtube_video=video,
-                temp_normalized_mp3_path=temp_normalized_mp3_path
-            )
-            delete_path(temp_normalized_mp3_path)
+            f"[Library Info] Video {video.title} - {video.id} already in library.")
     else:
         temp_downloaded_mp3_path = download_audio(video_id=video.id)
-        original_mp3_path = add_original_mp3_to_library(
-            youtube_video=video,
-            temp_downloaded_mp3_path=temp_downloaded_mp3_path
-        )
-        delete_path(temp_downloaded_mp3_path)
         temp_normalized_mp3_path = get_normalized_loudness_file(
-            mp3_file_path=original_mp3_path
+            mp3_file_path=temp_downloaded_mp3_path
         )
         add_normalized_mp3_to_library(
             youtube_video=video,
@@ -62,7 +47,7 @@ def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
         try:
             _sync_video_to_library(video)
         except Exception as e:
-            print(f"[Error] Failed to sync video {video.id}: {str(e)}")
+            print(f"[Error] Failed to sync video {video.title} - {video.id}: {str(e)}")
     print(
         f"[Playlist] Extracted and processed {len(playlist_info.videos)} videos from playlist.")
     

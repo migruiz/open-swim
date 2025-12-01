@@ -5,7 +5,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from open_swim.device.monitor import DeviceMonitor
-from open_swim.media.podcast.episode_processor import update_episodes_to_sync
+from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
 from open_swim.media.podcast.sync import enqueue_episode_sync
 from open_swim.media.youtube.library_sync import enqueue_playlist_library_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
