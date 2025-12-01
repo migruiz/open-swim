@@ -2,55 +2,50 @@ import json
 import time
 from open_swim.mqtt_client import MQTTClient
 from open_swim.device_monitor import DeviceMonitor
-from open_swim.playlist_extractor import extract_playlist
-from open_swim.mp3_downloader import download_mp3
+from open_swim.youtube.playlist_library_sync import sync_youtube_playlists_to_library
+from open_swim.youtube.device_library_sync import sync_with_device
+from open_swim.youtube.playlist_to_sync import set_playlists_to_sync
+from dotenv import load_dotenv
+from open_swim.podcast.podcast_sync import sync_podcast_episodes
+from open_swim.podcast.episodes_to_sync import set_episodes_to_sync
+import threading
+
+load_dotenv()
+
+
+
+
 
 def main() -> None:
     print("Open Swim running. Hello arm64 world!")
-    
 
-    
     # Set up MQTT connection callback
-    def on_mqtt_connected():
-        """Subscribe to test topic when connected. Also extract and publish playlist details."""
-        print("[MQTT] Connected to broker, ready to publish/subscribe.")
-        device_monitor.start_monitoring()
-        # Publish a test message
-        test_topic = "test/topic"
-        test_message = "Hello from Open Swim!"
-        mqtt_client.subscribe("test/topic")
-        mqtt_client.publish(test_topic, test_message)
-        print(f"Publishing message to topic '{test_topic}': {test_message}")
 
-        # Extract playlist details and publish them
-        playlist_url = "https://youtube.com/playlist?list=PLJLM5RvmYjvwQSYl_9AcTwo_t9ifhXZW6&si=KixiKg-3E5kDQRyH"
-        playlist_details = extract_playlist(playlist_url)
-        # playlist_details is a list of Pydantic objects; get their JSON representation
-        playlist_details_json = json.dumps([item.model_dump() for item in playlist_details], indent=2)
-        print("[Playlist Extractor] Playlist details:")
-        print(playlist_details_json)
-        mqtt_client.publish("openswim/playlist/details", playlist_details_json, qos=1, retain=False)
+    def on_mqtt_connected() -> None:
+        mqtt_client.subscribe("openswim/episodes_to_sync")
+        mqtt_client.subscribe("openswim/playlists_to_sync")
+        sync_podcast_episodes()
+        sync_youtube_playlists_to_library()
 
-        video_id = "5rTwOt9Qgik"
-        mp3_info = download_mp3(video_id)
-        # mp3_info is a Pydantic object; get its JSON representation
-        mp3_info_json = mp3_info.model_dump_json(indent=2)
-        print("[MP3 Downloader] MP3 download info:")
-        print(mp3_info_json)
-    
-    def on_mqtt_message(topic: str, message: str):
+
+    def on_mqtt_message(topic: str, message: str) -> None:
         """Handle incoming MQTT messages."""
         print(f"[MQTT] Message received on topic '{topic}': {message}")
-        
+        match topic:
+            case 'openswim/episodes_to_sync':
+                set_episodes_to_sync(message)
+            case 'openswim/playlists_to_sync':
+                set_playlists_to_sync(message)
+
     # Create MQTT client
     mqtt_client = MQTTClient(
         on_connect_callback=on_mqtt_connected,
         on_message_callback=on_mqtt_message
     )
-    
-    
+
     # Define device event handlers that publish to MQTT
-    def handle_device_connected(device: str, mount_point: str):
+
+    def handle_device_connected(device: str, mount_point: str) -> None:
         """Handle device connection - publish to MQTT."""
         topic = "openswim/device/status"
         payload = json.dumps({
@@ -61,8 +56,8 @@ def main() -> None:
         })
         mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published connection event to {topic}")
-    
-    def handle_device_disconnected():
+
+    def handle_device_disconnected() -> None:
         """Handle device disconnection - publish to MQTT."""
         topic = "openswim/device/status"
         payload = json.dumps({
@@ -71,16 +66,16 @@ def main() -> None:
         })
         mqtt_client.publish(topic, payload, qos=1, retain=True)
         print(f"[MQTT] Published disconnection event to {topic}")
-        
+
     # Start device monitor with callbacks
     device_monitor = DeviceMonitor(
         on_connected=handle_device_connected,
         on_disconnected=handle_device_disconnected
     )
-    
+
     try:
         mqtt_client.loop_forever()
-            
+
     except KeyboardInterrupt:
         print("\nShutting down...")
         mqtt_client.disconnect()
@@ -89,6 +84,7 @@ def main() -> None:
         print(f"Error: {e}")
         mqtt_client.disconnect()
         device_monitor.stop_monitoring()
+
 
 if __name__ == "__main__":
     main()

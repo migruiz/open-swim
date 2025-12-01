@@ -1,7 +1,6 @@
 import os
 import time
 from typing import Optional, Any, Protocol
-from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 
 
@@ -26,7 +25,14 @@ class MQTTClient:
         self.broker_port: int = 1883
         self.on_connect_callback = on_connect_callback
         self.on_message_callback = on_message_callback
-    def _on_connect(self, client, userdata, flags, rc, properties=None):
+    def _on_connect(
+        self,
+        client: mqtt.Client,
+        userdata: Any,
+        flags: dict,
+        rc: int,
+        properties: Any = None
+    ) -> None:
         """Internal callback when the client connects to the broker."""
         if rc == 0:
             print(f"Connected to MQTT broker successfully")
@@ -35,16 +41,16 @@ class MQTTClient:
         else:
             print(f"Failed to connect, return code {rc}")
     
-    def _on_message(self, client, userdata, msg):
+    def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
         """Internal callback when a message is received."""
+        
+    
+        
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
         self.on_message_callback(topic=msg.topic, message=msg.payload.decode())
                    
-    def loop_forever(self, broker_uri: Optional[str] = None):
+    def loop_forever(self, broker_uri: Optional[str] = None) -> None:
         """Connect to MQTT broker."""
-        # Load environment variables if not already loaded
-        load_dotenv()
-        
         # Get broker URI from parameter or environment
         if not broker_uri:
             broker_uri = os.getenv("MQTT_BROKER_URI")
@@ -63,7 +69,7 @@ class MQTTClient:
         self.broker_port = int(parts[1]) if len(parts) > 1 else 1883
         
         # Create MQTT client
-        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self.client = mqtt.Client()
         
         # Set callbacks
         self.client.on_connect = self._on_connect
@@ -78,18 +84,22 @@ class MQTTClient:
         # Wait a moment for connection to establish
         time.sleep(2)
     
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnect from MQTT broker."""
         if self.client:
             print("Disconnecting from MQTT broker...")
             self.client.loop_stop()
             self.client.disconnect()
     
-    def publish(self, topic: str, payload: str, qos: int = 0, retain: bool = False):
+    def publish(self, topic: str, payload: str, qos: int = 0, retain: bool = False) -> Any:
         """Publish a message to a topic."""        
+        if self.client is None:
+            raise RuntimeError("MQTT client is not connected.")
         return self.client.publish(topic, payload, qos=qos, retain=retain)
     
-    def subscribe(self, topic: str, qos: int = 0):
+    def subscribe(self, topic: str, qos: int = 0) -> None:
         """Subscribe to a topic."""
+        if self.client is None:
+            raise RuntimeError("MQTT client is not connected.")
         self.client.subscribe(topic, qos=qos)
         print(f"Subscribed to topic: {topic}")

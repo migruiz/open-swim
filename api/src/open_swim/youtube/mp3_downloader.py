@@ -2,19 +2,17 @@ import subprocess
 import os
 import secrets
 import re
+import sys
 from typing import Dict, Any
 from pathlib import Path
 from pydantic import BaseModel
 
 
-class DownloadedMP3(BaseModel):
-    file_path: str
-    title: str
-    video_id: str
-    file_size: int
 
 
-def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
+
+
+def download_mp3_to_temp(video_id: str) -> str:
     """
     Download a YouTube video as MP3 using yt-dlp.
     
@@ -36,8 +34,8 @@ def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     
     # Set output directory
-    if output_dir is None:
-        output_dir = '/tmp' if os.name != 'nt' else os.environ.get('TEMP', '.')
+    output_dir = '/tmp' if os.name != 'nt' else os.environ.get('TEMP', '.')
+        
     
     # Generate random temp filename
     temp_filename = f"{secrets.token_hex(16)}.mp3"
@@ -45,8 +43,10 @@ def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
     
     try:
         # Download and convert to MP3 using yt-dlp
+        # Use environment variable if set, otherwise default to 'yt-dlp' in PATH
+        yt_dlp_cmd = os.getenv('YTDLP_PATH', 'yt-dlp')
         command = [
-            'yt-dlp',
+            yt_dlp_cmd,
             '-x',
             '--audio-format', 'mp3',
             '--audio-quality', '0',
@@ -71,33 +71,10 @@ def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
         if not os.path.exists(output_path):
             raise RuntimeError("Downloaded file not found")
         
-        # Get video title for metadata
-        title = video_id
-        try:
-            title_command = ['yt-dlp', '--get-title', video_url]
-            title_result = subprocess.run(
-                title_command,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if title_result.returncode == 0 and title_result.stdout:
-                # Sanitize title (keep only alphanumeric and underscores)
-                raw_title = title_result.stdout.strip()
-                title = re.sub(r'[^a-z0-9]', '_', raw_title, flags=re.IGNORECASE)[:100]
-        except Exception as e:
-            print(f"Failed to get video title: {e}")
+
+  
         
-        # Get file size
-        file_size = os.path.getsize(output_path)
-        
-        return DownloadedMP3(
-            file_path=output_path,
-            title=title,
-            video_id=video_id,
-            file_size=file_size
-        )
+        return output_path
         
     except subprocess.TimeoutExpired:
         # Clean up partial download if exists
@@ -118,22 +95,4 @@ def download_mp3(video_id: str, output_dir: str = None) -> DownloadedMP3:
         raise
 
 
-def cleanup_mp3_file(file_path: str) -> bool:
-    """
-    Clean up (delete) an MP3 file.
-    
-    Args:
-        file_path: Full path to the file to delete
-        
-    Returns:
-        True if successfully deleted, False otherwise
-    """
-    try:
-        if os.path.exists(file_path):
-            os.unlink(file_path)
-            print(f"Cleaned up file: {file_path}")
-            return True
-        return False
-    except Exception as e:
-        print(f"Failed to delete file {file_path}: {e}")
-        return False
+
