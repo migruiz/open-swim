@@ -18,11 +18,19 @@ load_dotenv()
 def run() -> None:
     print("Open Swim running. Hello arm64 world!")
 
+    mqtt_client: MqttClient | None = None
+
+    def _handle_connect() -> None:
+        assert mqtt_client is not None
+        _on_mqtt_connected(mqtt_client)
+
+    def _handle_message(topic: str, message: Any) -> None:
+        assert mqtt_client is not None
+        _on_mqtt_message(topic, message, mqtt_client)
+
     mqtt_client = MqttClient(
-        on_connect_callback=lambda: _on_mqtt_connected(mqtt_client),
-        on_message_callback=lambda topic, message: _on_mqtt_message(
-            topic, message, mqtt_client
-        ),
+        on_connect_callback=_handle_connect,
+        on_message_callback=_handle_message,
     )
 
     device_monitor = DeviceMonitor(
@@ -32,7 +40,7 @@ def run() -> None:
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
 
-    device_monitor.start_monitoring()
+    #device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()

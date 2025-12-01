@@ -1,3 +1,9 @@
 api/build/
 api/src/open_swim/podcast/__pycache__/
 api/src/open_swim/youtube/__pycache__/
+api/src/open_swim/media/podcast/__pycache__/
+api/src/open_swim/media/youtube/__pycache__/
+api/src/open_swim/device/__pycache__/
+api/src/open_swim/messaging/__pycache__/
+api/src/open_swim/storage/__pycache__/
+api/src/open_swim/media/__pycache__/
