@@ -1,8 +1,5 @@
 import os
-import re
-import shutil
 import json
-import hashlib
 from typing import List, Dict, Any
 
 from pydantic import BaseModel
@@ -12,8 +9,7 @@ from pydantic import BaseModel
 
 class YoutubePlaylist(BaseModel):
     id: str
-    title: str
-    url: str = ""
+    playlist_dir: str
     
 class PodcastEpisode(BaseModel):
     id: str
@@ -21,11 +17,17 @@ class PodcastEpisode(BaseModel):
 
 
 class DeviceSyncInfo(BaseModel):
-    podcasts_dir_name: str = "podcasts"
+    podcasts_dir: str = "podcasts"
     podcasts_episodes: List[PodcastEpisode] 
     playlists: List[YoutubePlaylist] 
 
 
+def sync() -> None:
+    """Sync device information by loading and saving device_sync.json."""
+    sd_card_path = os.getenv("OPEN_SWIM_SD_PATH", "/sdcard")
+    sync_data = load_device_sync_info(sd_card_path)
+    # Here you would add logic to update sync_data as needed
+    save_device_sync_info(sd_card_path, sync_data)
 
 
 def load_device_sync_info(sd_card_path: str) -> DeviceSyncInfo:
