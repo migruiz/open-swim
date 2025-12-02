@@ -12,7 +12,7 @@ from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_
 from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
 
 
-def _get_playlists_to_sync() -> List[PlaylistInfo]:
+def get_playlists_to_sync() -> List[PlaylistInfo]:
     """Return a list of playlist URLs to sync from environment variable."""
     playlists_to_sync = load_playlists_to_sync()
 
@@ -58,9 +58,8 @@ def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
 
 
 
-def sync_youtube_playlists_to_library() -> None:
-    """Sync all playlists specified in environment variable to the library."""
-    playlists_to_sync = _get_playlists_to_sync()
+def sync_youtube_playlists_to_library(playlists_to_sync: List[PlaylistInfo]) -> None:
+    """Sync all playlists specified in environment variable to the library."""    
     for playlist in playlists_to_sync:
         print(f"[Playlist Sync] Syncing playlist: {playlist.title}")
         _sync_library_playlist(playlist)
