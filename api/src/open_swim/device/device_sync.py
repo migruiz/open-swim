@@ -5,12 +5,10 @@ from typing import List, Dict, Any
 
 from pydantic import BaseModel, Field
 
-from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
+from open_swim.media.youtube.playlists import PlaylistInfo
 
 
-class PlayListInfo(BaseModel):
-    id: str
-    title: str
+
 
 
 
@@ -18,16 +16,14 @@ class DeviceSyncInfo(BaseModel):
     """Has the current state of the device sync information.
     This is stored in device_sync.json on the device's SD card."""
     podcasts_dir: str = "podcasts"
-    playlists: List[PlayListInfo] = Field(default_factory=list)
+    playlists: List[PlaylistInfo] = Field(default_factory=list)
 
 
-def sync() -> None:
+def sync(playlists_to_sync: List[PlaylistInfo]) -> None:
     """Sync device information by loading and saving device_sync.json."""
     sd_card_path = os.getenv("OPEN_SWIM_SD_PATH", "/sdcard")
     device_info = _load_device_sync_info(sd_card_path)
     
-    # Load the playlists to sync from the main library
-    playlists_to_sync = load_playlists_to_sync()
     
     playlists_to_sync_by_id = {playlist.id: playlist for playlist in playlists_to_sync}
     existing_playlists_by_id = {playlist.id: playlist for playlist in device_info.playlists}
@@ -42,13 +38,13 @@ def sync() -> None:
             print(f"[Device Sync] Removed playlist folder no longer requested: {playlist_path}")
 
     # Ensure all requested playlists exist on device and update device info
-    updated_playlists: List[PlayListInfo] = []
+    updated_playlists: List[PlaylistInfo] = []
     for playlist in playlists_to_sync:
         if playlist.id not in existing_playlists_by_id:
             playlist_path = os.path.join(sd_card_path, playlist.title)
             os.makedirs(playlist_path, exist_ok=True)
             print(f"[Device Sync] Created playlist folder: {playlist_path}")
-        updated_playlists.append(PlayListInfo(id=playlist.id, title=playlist.title))
+        updated_playlists.append(PlaylistInfo(id=playlist.id, title=playlist.title))
 
     device_info.playlists = updated_playlists
     _save_device_sync_info(sd_card_path, device_info)

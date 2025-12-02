@@ -31,7 +31,7 @@ def run() -> None:
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
 
-    device_monitor.start_monitoring()
+    #device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()

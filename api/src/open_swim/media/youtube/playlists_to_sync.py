@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 class PlaylistToSync(BaseModel):
     id: str    
-    playlist_url: str
     title: str
     
 LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
