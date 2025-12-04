@@ -5,7 +5,7 @@ import glob
 from typing import List, Set
 
 from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
-from open_swim.media.podcast.sync import _load_library_info
+from open_swim.media.podcast.sync import load_library_info
 
 
 def _load_synced_episodes(podcast_folder_path: str) -> List[EpisodeToSync]:
@@ -80,10 +80,13 @@ def sync_podcast_episodes_to_device() -> None:
     _delete_mp3_files(podcast_folder_path)
 
     # Load library info to get episode directories
-    library_info = _load_library_info()
+    library_info = load_library_info()
 
-    # Copy MP3 files from library to device
-    for episode in episodes_to_sync:
+    # Sort episodes by date ascending
+    sorted_episodes = sorted(episodes_to_sync, key=lambda e: e.date)
+
+    # Copy MP3 files from library to device (ordered by episode date, then filename)
+    for episode in sorted_episodes:
         if episode.id not in library_info.episodes:
             print(f"[Podcast Sync] Episode {episode.id} not found in library, skipping")
             continue
@@ -95,9 +98,9 @@ def sync_podcast_episodes_to_device() -> None:
             print(f"[Podcast Sync] Episode directory does not exist: {episode_dir}, skipping")
             continue
 
-        # Copy all MP3 files from episode directory to device
+        # Get and sort MP3 files by filename (001, 002, 003...)
         mp3_pattern = os.path.join(episode_dir, "*.mp3")
-        mp3_files = glob.glob(mp3_pattern)
+        mp3_files = sorted(glob.glob(mp3_pattern), key=lambda f: os.path.basename(f))
 
         for mp3_file in mp3_files:
             filename = os.path.basename(mp3_file)

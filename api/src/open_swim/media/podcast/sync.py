@@ -48,7 +48,7 @@ def sync_podcast_episodes() -> None:
 
 def _process_podcast_episode(episode: EpisodeToSync) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
-    library_info = _load_library_info()
+    library_info = load_library_info()
     if episode.id in library_info.episodes:
         print(f"Episode {episode.id} already processed. Skipping.")
         return
@@ -99,7 +99,7 @@ def _save_library_info(library_data: LibraryData) -> None:
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
-def _load_library_info() -> LibraryData:
+def load_library_info() -> LibraryData:
     info_json_path = os.path.join(podcasts_library_path, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
