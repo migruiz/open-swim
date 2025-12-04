@@ -5,7 +5,7 @@ from typing import Callable
 
 from open_swim.media.podcast.sync import sync_podcast_episodes
 from open_swim.media.youtube.library_sync import get_playlists_to_sync, sync_youtube_playlists_to_library
-from open_swim.device.device_sync import sync_device
+from open_swim.device.sync.device_sync import sync_device
 
 _sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
 

@@ -12,3 +12,5 @@ api/.claude/settings.local.json
 api/nul
 api/src/open_swim/device/youtube/__pycache__/
 api/src/open_swim/device/podcast/__pycache__/
+api/src/open_swim/device/sync/podcast/__pycache__/
+api/src/open_swim/device/sync/youtube/__pycache__/
