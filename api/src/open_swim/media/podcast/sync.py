@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import shutil
 import os
@@ -17,6 +18,7 @@ from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episode
 class EpisodeMp3Info(BaseModel):
     id: str
     title: str
+    date: datetime
     episode_dir: str
 
 
@@ -73,6 +75,7 @@ def _process_podcast_episode(episode: EpisodeToSync) -> None:
         library_info.episodes[episode.id] = EpisodeMp3Info(
             id=episode.id,
             title=episode.title,
+            date= episode.date,
             episode_dir=str(episode_dir)
         )
         _save_library_info(library_info)
@@ -91,7 +94,8 @@ def _get_library_episode_directory(episode: EpisodeToSync) -> Path:
 def _save_library_info(library_data: LibraryData) -> None:
     info_json_path = os.path.join(podcasts_library_path, "info.json")
     with open(info_json_path, "w", encoding="utf-8") as f:
-        json.dump(library_data.model_dump(), f, indent=2)
+        # Use JSON-friendly dump so datetimes serialize as ISO strings
+        json.dump(library_data.model_dump(mode="json"), f, indent=2)
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
