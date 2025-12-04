@@ -27,8 +27,10 @@ threading.Thread(target=_sync_worker, daemon=True).start()
 
 def work() -> None:
     sync_podcast_episodes()
+    
     playlists_to_sync = get_playlists_to_sync()
     sync_youtube_playlists_to_library(playlists_to_sync)
+    
     sync_device(playlists_to_sync)
     #sync_device_playlists(play_lists=playlists_to_sync)
 
