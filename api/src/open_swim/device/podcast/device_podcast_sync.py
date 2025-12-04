@@ -1,40 +1,114 @@
+import os
+import json
+import shutil
+import glob
+from typing import List, Set
+
+from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
+from open_swim.media.podcast.sync import _load_library_info
 
 
-#TODO: Sync  files to this folder sd_card_path = os.getenv("OPEN_SWIM_SD_PATH", "/sdcard") / podcast
-#the folder already exists no need to check
-# create a pydantic class PodcastEpisode for this json
-# {
-#    "id": "692726a2eafa3981bcda3d0b",
-#    "date": "2025-11-26 16:02:51+00:00",
-#    "download_url": "https://dts.podtrac.com/redirect.mp3/od-cmg.streamguys1.com/sanantonio/san995/20251126100250-38-BillyMadisonShowPodcast-November262025.mp3?awCollectionId=san995-02&awGenre=Comedy&awEpisodeId=5c56a100-cae1-11f0-99fd-9d2893fba4d7",
-#    "title": "Billy Madison Show Podcast - November, 26, 2025"
-#  }
-# check that the /sdcard/podcast folder contains a synced_episodes.json file which is a list of the above objects
-# now read the episodes to sync from this location 
-# LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-#podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts") / episodes_to_sync.json
+def _load_synced_episodes(podcast_folder_path: str) -> List[EpisodeToSync]:
+    """Load synced_episodes.json from device if it exists."""
+    synced_json_path = os.path.join(podcast_folder_path, "synced_episodes.json")
+    if os.path.exists(synced_json_path):
+        with open(synced_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return [EpisodeToSync(**item) for item in data]
+    return []
 
-# now check if the episdes ids are the same in both files, if they are the same do nothing
-# if they are different DELETE all files from the /sdcard/podcast folder
-#now read the contents of the library os.path.join(LIBRARY_PATH, "podcasts") / info.json
-#which are in this format:
-{
-  "episodes": {
-    "692726a2eafa3981bcda3d0b": {
-      "id": "692726a2eafa3981bcda3d0b",
-      "title": "Billy Madison Show Podcast - November, 26, 2025",
-      "date": "2025-11-26T16:02:51Z",
-      "episode_dir": "C:\\Users\\miguelpc\\Music\\OpenSwimLibrary\\podcasts\\Billy_Madison_Show_Podcast_-_November_26_2025_692726a2eafa3981bcda3d0b"
-    },
-    "6925d4487fe9472599152092": {
-      "id": "6925d4487fe9472599152092",
-      "title": "Billy Madison Show Podcast - November, 25, 2025",
-      "date": "2025-11-25T16:00:31Z",
-      "episode_dir": "C:\\Users\\miguelpc\\Music\\OpenSwimLibrary\\podcasts\\Billy_Madison_Show_Podcast_-_November_25_2025_6925d4487fe9472599152092"
-    }
-  }
-}
 
-# now search any episode id in the podcast_to_sync.json file in the library info.json file, get the episode_dir and copy 
-#all mp3 files from there to the /sdcard/podcast folder
-#finally save the podcast_to_sync.json file to the /sdcard/podcast/synced_episodes.json file
+def _save_synced_episodes(podcast_folder_path: str, episodes: List[EpisodeToSync]) -> None:
+    """Save synced episodes list to device."""
+    synced_json_path = os.path.join(podcast_folder_path, "synced_episodes.json")
+    with open(synced_json_path, "w", encoding="utf-8") as f:
+        json.dump([episode.model_dump() for episode in episodes], f, default=str, indent=2)
+    print(f"[Podcast Sync] Saved synced episodes to {synced_json_path}")
+
+
+def _get_episode_ids(episodes: List[EpisodeToSync]) -> Set[str]:
+    """Extract episode IDs from a list of episodes."""
+    return {episode.id for episode in episodes}
+
+
+def _delete_mp3_files(podcast_folder_path: str) -> None:
+    """Delete all MP3 files from the podcast folder."""
+    mp3_pattern = os.path.join(podcast_folder_path, "*.mp3")
+    mp3_files = glob.glob(mp3_pattern)
+    for mp3_file in mp3_files:
+        os.remove(mp3_file)
+        print(f"[Podcast Sync] Deleted: {os.path.basename(mp3_file)}")
+
+
+def sync_podcast_episodes_to_device() -> None:
+    """Sync podcast episodes from library to device."""
+    device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
+
+    if not device_sdcard_path:
+        print("[Podcast Sync] OPEN_SWIM_SD_PATH environment variable not set")
+        return
+
+    if not os.path.exists(device_sdcard_path):
+        print(f"[Podcast Sync] Device SD card path does not exist: {device_sdcard_path}")
+        return
+
+    podcast_folder_path = os.path.join(device_sdcard_path, "podcast")
+    if not os.path.exists(podcast_folder_path):
+        print(f"[Podcast Sync] Podcast folder does not exist: {podcast_folder_path}")
+        return
+
+    # Load episodes to sync from library
+    episodes_to_sync = load_episodes_to_sync()
+    if not episodes_to_sync:
+        print("[Podcast Sync] No episodes to sync")
+        return
+
+    # Load currently synced episodes from device
+    synced_episodes = _load_synced_episodes(podcast_folder_path)
+
+    # Compare episode IDs
+    episodes_to_sync_ids = _get_episode_ids(episodes_to_sync)
+    synced_episode_ids = _get_episode_ids(synced_episodes)
+
+    if episodes_to_sync_ids == synced_episode_ids:
+        print("[Podcast Sync] Episodes already up to date on device. Skipping.")
+        return
+
+    print("[Podcast Sync] Episode list changed. Syncing to device...")
+
+    # Delete all existing MP3 files from podcast folder
+    _delete_mp3_files(podcast_folder_path)
+
+    # Load library info to get episode directories
+    library_info = _load_library_info()
+
+    # Copy MP3 files from library to device
+    for episode in episodes_to_sync:
+        if episode.id not in library_info.episodes:
+            print(f"[Podcast Sync] Episode {episode.id} not found in library, skipping")
+            continue
+
+        episode_info = library_info.episodes[episode.id]
+        episode_dir = episode_info.episode_dir
+
+        if not os.path.exists(episode_dir):
+            print(f"[Podcast Sync] Episode directory does not exist: {episode_dir}, skipping")
+            continue
+
+        # Copy all MP3 files from episode directory to device
+        mp3_pattern = os.path.join(episode_dir, "*.mp3")
+        mp3_files = glob.glob(mp3_pattern)
+
+        for mp3_file in mp3_files:
+            filename = os.path.basename(mp3_file)
+            destination_path = os.path.join(podcast_folder_path, filename)
+            try:
+                shutil.copy2(mp3_file, destination_path)
+                print(f"[Podcast Sync] Copied: {filename}")
+            except Exception as e:
+                print(f"[Podcast Sync] Error copying {filename}: {e}")
+
+    # Save synced episodes list to device
+    _save_synced_episodes(podcast_folder_path, episodes_to_sync)
+
+    print("[Podcast Sync] Sync completed")
