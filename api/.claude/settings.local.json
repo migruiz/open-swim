@@ -3,7 +3,10 @@
     "allow": [
       "Bash(tree:*)",
       "Bash(dir /s \"C:\\repos\\open-swim\\api\\src\\open_swim\")",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(cd:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

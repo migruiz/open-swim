@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 from open_swim.media.youtube.playlists import PlaylistInfo
+from open_swim.device.device_youtube_sync import sync_device_playlists
 
 
 
@@ -15,7 +16,6 @@ from open_swim.media.youtube.playlists import PlaylistInfo
 class DeviceSyncInfo(BaseModel):
     """Has the current state of the device sync information.
     This is stored in device_sync.json on the device's SD card."""
-    podcasts_dir: str = "podcasts"
     playlists: List[PlaylistInfo] = Field(default_factory=list)
 
 
@@ -48,6 +48,7 @@ def sync(playlists_to_sync: List[PlaylistInfo]) -> None:
 
     device_info.playlists = updated_playlists
     _save_device_sync_info(sd_card_path, device_info)
+    sync_device_playlists(play_lists=playlists_to_sync)
 
 
 def _load_device_sync_info(sd_card_path: str) -> DeviceSyncInfo:

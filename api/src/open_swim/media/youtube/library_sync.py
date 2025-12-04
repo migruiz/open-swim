@@ -27,8 +27,8 @@ def _sync_video_to_library(video: YoutubeVideo) -> None:
     """Sync a single video to the library, downloading and normalizing if needed."""
     library_video_info = get_library_video_info(video.id)
     if library_video_info:
-        print(
-            f"[Library Info] Video {video.title} - {video.id} already in library.")
+        #print(            f"[Library Info] Video {video.title} - {video.id} already in library.")
+        pass
     else:
         print(f"[Library Sync] Processing video {video.title} - {video.id}...")
             # Create a temporary directory for processing
