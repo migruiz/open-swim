@@ -8,7 +8,7 @@ from open_swim.media.youtube.library import (
     get_library_video_info,
 )
 from open_swim.media.youtube.normalize import get_normalized_loudness_file
-from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_playlist
+from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_playlist_information
 from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
 
 
@@ -16,11 +16,14 @@ def get_playlists_to_sync() -> List[PlaylistInfo]:
     """Return a list of playlist URLs to sync from environment variable."""
     playlists_to_sync = load_playlists_to_sync()
 
-    playlist_ids = [playlist.id.strip()
-                    for playlist in playlists_to_sync]
-    playlist_urls = [
-        f"https://youtube.com/playlist?list={playlist_id}" for playlist_id in playlist_ids]
-    return [fetch_playlist(url) for url in playlist_urls]
+    return [
+        fetch_playlist_information(
+            playlist_url=f"https://youtube.com/playlist?list={playlist.id.strip()}",
+            playlist_title=playlist.title
+        )
+        for playlist in playlists_to_sync
+    ]
+
 
 
 def _sync_video_to_library(video: YoutubeVideo) -> None:

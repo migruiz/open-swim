@@ -21,7 +21,7 @@ class PlaylistInfo(BaseModel):
     videos: List[YoutubeVideo] = Field(default_factory=list)
 
 
-def fetch_playlist(playlist_url: str) -> PlaylistInfo:
+def fetch_playlist_information(playlist_url: str, playlist_title: str) -> PlaylistInfo:
     """
     Extract playlist information from a YouTube playlist URL using yt-dlp.
     Raises ValueError or RuntimeError on error.
@@ -38,7 +38,7 @@ def fetch_playlist(playlist_url: str) -> PlaylistInfo:
 
     try:
         yt_dlp_cmd = os.getenv("YTDLP_PATH", "yt-dlp")
-        print(f"Extracting playlist info from URL: {playlist_url}")
+        print(f"Extracting playlist {playlist_title} info from URL: {playlist_url}")
         command = [yt_dlp_cmd, "--dump-single-json", "--flat-playlist", playlist_url]
 
         result = subprocess.run(
