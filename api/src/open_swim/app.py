@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from open_swim.config import config
 from open_swim.device.monitor import DeviceMonitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
-from open_swim.sync import enqueue_sync
+from open_swim.sync import enqueue_sync, set_device_monitor
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
 from open_swim.messaging.mqtt import MqttClient
 
@@ -32,6 +32,7 @@ def run() -> None:
         ),
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
+    set_device_monitor(device_monitor)
 
     #device_monitor.start_monitoring()
 

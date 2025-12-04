@@ -6,7 +6,8 @@
       "Bash(findstr:*)",
       "Bash(cd:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(uv run mypy:*)"
     ],
     "deny": [],
     "ask": []
