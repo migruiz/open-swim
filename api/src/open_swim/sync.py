@@ -1,23 +1,17 @@
 
 import queue
 import threading
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable
 
 from open_swim.media.podcast.sync import sync_podcast_episodes
 from open_swim.media.youtube.library_sync import get_playlists_to_sync, sync_youtube_playlists_to_library
 from open_swim.device.sync.device_sync import sync_device
 
-if TYPE_CHECKING:
-    from open_swim.device.monitor import DeviceMonitor
+
+
 
 _sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
-_device_monitor: Optional["DeviceMonitor"] = None
 
-
-def set_device_monitor(monitor: "DeviceMonitor") -> None:
-    """Set the device monitor reference for connection checks."""
-    global _device_monitor
-    _device_monitor = monitor
 
 
 def _sync_worker() -> None:
@@ -43,8 +37,9 @@ def work() -> None:
 
     playlists_to_sync = get_playlists_to_sync()
     sync_youtube_playlists_to_library(playlists_to_sync)
-
-    if _device_monitor is None or not _device_monitor.connected:
+    from open_swim.app import get_device_monitor
+    device_monitor = get_device_monitor()
+    if device_monitor is None or not device_monitor.connected:
         print("[SYNC] Skipping device sync: device not connected")
         return
 

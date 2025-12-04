@@ -1,9 +1,9 @@
 from typing import List
-from open_swim.device.youtube.device_youtube_sync import sync_device_playlists_videos
-from open_swim.device.youtube.device_playlist_dirs_sync import sync_playlists_directories
+from open_swim.device.sync.youtube.device_youtube_sync import sync_device_playlists_videos
+from open_swim.device.sync.youtube.device_playlist_dirs_sync import sync_playlists_directories
 
-from open_swim.device.podcast.device_podcast_dirs_sync import create_podcast_folder
-from open_swim.device.podcast.device_podcast_sync import sync_podcast_episodes_to_device
+from open_swim.device.sync.podcast.device_podcast_dirs_sync import create_podcast_folder
+from open_swim.device.sync.podcast.device_podcast_sync import sync_podcast_episodes_to_device
 
 from open_swim.media.youtube.playlists import PlaylistInfo
 

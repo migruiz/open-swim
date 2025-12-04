@@ -1,21 +1,31 @@
 import json
 import time
-from typing import Any
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 
 from open_swim.config import config
 from open_swim.device.monitor import DeviceMonitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
-from open_swim.sync import enqueue_sync, set_device_monitor
+from open_swim.sync import enqueue_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
 from open_swim.messaging.mqtt import MqttClient
 
 
 load_dotenv()
 
+# Module-level device monitor instance for access by other modules
+_device_monitor: Optional[DeviceMonitor] = None
+
+
+def get_device_monitor() -> Optional[DeviceMonitor]:
+    """Get the device monitor instance."""
+    return _device_monitor
+
 
 def run() -> None:
+    global _device_monitor
+
     config.validate_required()
     print("Open Swim running. Hello arm64 world!")
 
@@ -26,15 +36,14 @@ def run() -> None:
         ),
     )
 
-    device_monitor = DeviceMonitor(
+    _device_monitor = DeviceMonitor(
         on_connected=lambda device, mount_point: _publish_device_status(
             mqtt_client, "connected", device, mount_point
         ),
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
-    set_device_monitor(device_monitor)
 
-    #device_monitor.start_monitoring()
+    #_device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()
@@ -44,7 +53,7 @@ def run() -> None:
         print(f"Error: {exc}")
     finally:
         mqtt_client.disconnect()
-        device_monitor.stop_monitoring()
+        _device_monitor.stop_monitoring()
 
 
 def _on_mqtt_connected(mqtt_client: MqttClient) -> None:
