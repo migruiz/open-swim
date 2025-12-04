@@ -2,10 +2,10 @@
 import queue
 import threading
 from typing import Callable
-from open_swim.device.device_youtube_sync import sync_device_playlists
+
 from open_swim.media.podcast.sync import sync_podcast_episodes
 from open_swim.media.youtube.library_sync import get_playlists_to_sync, sync_youtube_playlists_to_library
-from open_swim.device.device_sync import sync as sync_device
+from open_swim.device.device_sync import sync_device
 
 _sync_task_queue: queue.Queue[Callable[[], None]] = queue.Queue()
 
@@ -30,9 +30,8 @@ def work() -> None:
     
     playlists_to_sync = get_playlists_to_sync()
     sync_youtube_playlists_to_library(playlists_to_sync)
-    
     sync_device(playlists_to_sync)
-    #sync_device_playlists(play_lists=playlists_to_sync)
+
 
 
 def enqueue_sync() -> None:

@@ -116,7 +116,7 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
         _save_device_sync_info(playlist_folder_path = playlist_folder_path, sync_data = sync_data)
 
 
-def sync_device_playlists(play_lists: List[PlaylistInfo]) -> None:
+def sync_device_playlists_videos(play_lists: List[PlaylistInfo]) -> None:
     """Sync the music library with the connected device."""
     library_info = load_library_info()
     device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
