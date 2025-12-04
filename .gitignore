@@ -7,3 +7,6 @@ api/src/open_swim/device/__pycache__/
 api/src/open_swim/messaging/__pycache__/
 api/src/open_swim/storage/__pycache__/
 api/src/open_swim/media/__pycache__/
+client/.claude/settings.local.json
+api/.claude/settings.local.json
+api/nul
