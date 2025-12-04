@@ -31,8 +31,7 @@ class LibraryData(BaseModel):
         return cls(episodes=episodes)
 
 
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
+from open_swim.config import config
 
 
 
@@ -87,12 +86,12 @@ def _get_library_episode_directory(episode: EpisodeToSync) -> Path:
     episode_folder = episode.title + "_" + episode.id
     episode_folder = re.sub(r'[^\w\s-]', '', episode_folder)
     episode_folder = re.sub(r'[\s]+', '_', episode_folder.strip())
-    episode_dir = Path(podcasts_library_path) / episode_folder
+    episode_dir = Path(config.podcasts_library_path) / episode_folder
     return episode_dir
 
 
 def _save_library_info(library_data: LibraryData) -> None:
-    info_json_path = os.path.join(podcasts_library_path, "info.json")
+    info_json_path = os.path.join(config.podcasts_library_path, "info.json")
     with open(info_json_path, "w", encoding="utf-8") as f:
         # Use JSON-friendly dump so datetimes serialize as ISO strings
         json.dump(library_data.model_dump(mode="json"), f, indent=2)
@@ -100,7 +99,7 @@ def _save_library_info(library_data: LibraryData) -> None:
 
 
 def load_library_info() -> LibraryData:
-    info_json_path = os.path.join(podcasts_library_path, "info.json")
+    info_json_path = os.path.join(config.podcasts_library_path, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
             data = json.load(f)

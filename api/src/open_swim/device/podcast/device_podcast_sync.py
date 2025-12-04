@@ -4,6 +4,7 @@ import shutil
 import glob
 from typing import List, Set
 
+from open_swim.config import config
 from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episodes_to_sync
 from open_swim.media.podcast.sync import load_library_info
 
@@ -42,7 +43,7 @@ def _delete_mp3_files(podcast_folder_path: str) -> None:
 
 def sync_podcast_episodes_to_device() -> None:
     """Sync podcast episodes from library to device."""
-    device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
+    device_sdcard_path = config.device_sd_path
 
     if not device_sdcard_path:
         print("[Podcast Sync] OPEN_SWIM_SD_PATH environment variable not set")

@@ -1,9 +1,10 @@
 import json
-import os
 import subprocess
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+from open_swim.config import config
 
 
 class YoutubeVideo(BaseModel):
@@ -37,9 +38,8 @@ def fetch_playlist_information(playlist_url: str, playlist_title: str) -> Playli
         raise ValueError("Invalid YouTube playlist URL")
 
     try:
-        yt_dlp_cmd = os.getenv("YTDLP_PATH", "yt-dlp")
         print(f"Extracting playlist {playlist_title} info from URL: {playlist_url}")
-        command = [yt_dlp_cmd, "--dump-single-json", "--flat-playlist", playlist_url]
+        command = [config.ytdlp_path, "--dump-single-json", "--flat-playlist", playlist_url]
 
         result = subprocess.run(
             command,

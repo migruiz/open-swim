@@ -1,15 +1,10 @@
-import os
 import re
 import subprocess
 from pathlib import Path
 from typing import List
 
+from open_swim.config import config
 from open_swim.media.podcast.episodes_to_sync import EpisodeToSync
-
-
-    
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
   
 
 
@@ -47,9 +42,8 @@ def _split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     segment_pattern = output_dir / "segment_%03d.mp3"
 
     # Use ffmpeg to split the file
-    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
-        ffmpeg_cmd,
+        config.ffmpeg_path,
         '-i', str(episode_path),
         '-f', 'segment',
         '-segment_time', str(segment_duration),
@@ -76,13 +70,10 @@ def _generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output
     mp3_output = output_dir / f"intro_{index}_of_{total}.mp3"
 
     # Use piper to generate the speech (outputs WAV)
-    # Note: You may need to specify a voice model path with --model
-    piper_cmd_parts = os.getenv('PIPER_CMD', 'piper').split()
-    piper_model = os.getenv('PIPER_VOICE_MODEL_PATH',
-                            '/voices/en_US-hfc_female-medium.onnx')
+    piper_cmd_parts = config.piper_cmd.split()
     cmd = [
         *piper_cmd_parts,
-        '-m', piper_model,
+        '-m', config.piper_voice_model_path,
         '-f', str(wav_output),
         '--', text
     ]
@@ -91,9 +82,8 @@ def _generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output
     subprocess.run(cmd, check=True, capture_output=True)
 
     # Convert WAV to MP3 using ffmpeg
-    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     cmd = [
-        ffmpeg_cmd,
+        config.ffmpeg_path,
         '-i', str(wav_output),
         '-codec:a', 'libmp3lame',
         '-b:a', '128k',
@@ -113,9 +103,8 @@ def _merge_intro_and_segment(episode: EpisodeToSync, segment_path: Path, intro_p
 
     # Generate 0.5 second of silence
     silence_path = output_dir / f"silence_{episode.id}_{index}.mp3"
-    ffmpeg_cmd = os.getenv('FFMPEG_PATH', 'ffmpeg')
     silence_cmd = [
-        ffmpeg_cmd,
+        config.ffmpeg_path,
         '-f', 'lavfi',
         '-i', 'anullsrc=r=44100:cl=stereo',
         '-t', '0.5',
@@ -135,7 +124,7 @@ def _merge_intro_and_segment(episode: EpisodeToSync, segment_path: Path, intro_p
     # Use ffmpeg to concatenate the files
     # Re-encode to ensure consistent format/bitrate instead of using -c copy
     cmd = [
-        ffmpeg_cmd,
+        config.ffmpeg_path,
         '-f', 'concat',
         '-safe', '0',
         '-i', str(concat_list_path),

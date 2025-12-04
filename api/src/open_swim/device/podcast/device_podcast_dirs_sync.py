@@ -1,8 +1,11 @@
 import os
 
+from open_swim.config import config
+
+
 def create_podcast_folder() -> None:
     """Get and validate the podcast directory path on the SD card."""
-    sd_card_path = os.getenv("OPEN_SWIM_SD_PATH", "/sdcard")
+    sd_card_path = config.device_sd_path
 
     if not os.path.exists(sd_card_path):
         raise FileNotFoundError(f"SD card path does not exist: {sd_card_path}")

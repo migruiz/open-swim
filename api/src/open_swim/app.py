@@ -4,6 +4,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from open_swim.config import config
 from open_swim.device.monitor import DeviceMonitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
 from open_swim.sync import enqueue_sync
@@ -15,6 +16,7 @@ load_dotenv()
 
 
 def run() -> None:
+    config.validate_required()
     print("Open Swim running. Hello arm64 world!")
 
     mqtt_client: MqttClient = MqttClient(

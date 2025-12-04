@@ -5,6 +5,7 @@ import json
 import hashlib
 from typing import List, Dict, Any
 
+from open_swim.config import config
 from open_swim.media.youtube.library import LibraryData, load_library_info
 from open_swim.media.youtube.playlists import PlaylistInfo
 
@@ -119,12 +120,12 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
 def sync_device_playlists_videos(play_lists: List[PlaylistInfo]) -> None:
     """Sync the music library with the connected device."""
     library_info = load_library_info()
-    device_sdcard_path = os.getenv('OPEN_SWIM_SD_PATH', '')
-    
+    device_sdcard_path = config.device_sd_path
+
     if not device_sdcard_path:
         print("[Device Sync] OPEN_SWIM_SD_PATH environment variable not set")
         return
-    
+
     if not os.path.exists(device_sdcard_path):
         print(f"[Device Sync] Device SD card path does not exist: {device_sdcard_path}")
         return

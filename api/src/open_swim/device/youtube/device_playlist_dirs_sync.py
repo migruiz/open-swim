@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 
 from pydantic import BaseModel, Field
 
+from open_swim.config import config
 from open_swim.media.youtube.playlists import PlaylistInfo
 
 
@@ -26,7 +27,7 @@ def _prepare_device_directories(
     playlists_to_sync: List[PlaylistInfo]
 ) -> None:
     """Ensure requested playlists have directories and remove ones no longer requested."""
-    sd_card_path = os.getenv("OPEN_SWIM_SD_PATH", "/sdcard")
+    sd_card_path = config.device_sd_path
     device_info = _load_device_sync_info(sd_card_path)
 
     playlists_to_sync_by_id = {
