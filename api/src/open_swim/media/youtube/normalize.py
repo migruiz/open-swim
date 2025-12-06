@@ -29,7 +29,7 @@ def get_normalized_loudness_file(tmp_path: Path, mp3_file_path: str) -> str:
     cmd = [
         config.ffmpeg_path,
         '-i', mp3_file_path,
-        '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11',
+        '-af', 'loudnorm=I=-10:TP=-1.0:LRA=11,volume=6dB',
         '-b:a', '128k',
         '-y',  # Overwrite output file if it exists
         str(output_path)
