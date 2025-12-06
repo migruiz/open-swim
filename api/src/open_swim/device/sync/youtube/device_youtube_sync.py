@@ -8,13 +8,12 @@ from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.media.youtube.library import load_library
 from open_swim.device.sync.state import DevicePlaylistState, load_sync_state, save_sync_state
 from open_swim.media.youtube.models import YouTubeLibrary
-from open_swim.media.youtube.playlists import PlaylistInfo
+from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo
 
 
-def _calculate_playlist_hash(playlist: PlaylistInfo) -> str:
-    """Calculate a unique hash based on video IDs in order."""
-    # Create a string with video IDs and their index positions
-    video_data = "".join([f"{idx}:{video.id}" for idx, video in enumerate(playlist.videos)])
+def _calculate_playlist_hash(videos: List[YoutubeVideo]) -> str:
+    """Calculate a unique hash based on video IDs in the copy order."""
+    video_data = "".join([f"{idx}:{video.id}" for idx, video in enumerate(videos)])
     return hashlib.sha256(video_data.encode()).hexdigest()
 
 
@@ -26,9 +25,10 @@ def _sync_playlist_to_device(
 ) -> None:
     playlist_title = sanitize_playlist_title(playlist.title)
     playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
+    videos_in_desc_order = list(reversed(playlist.videos))
 
     # Calculate current playlist hash
-    current_hash = _calculate_playlist_hash(playlist)
+    current_hash = _calculate_playlist_hash(videos_in_desc_order)
 
     stored_state = sync_state.get(playlist.id)
     if stored_state and stored_state.playlist_hash == current_hash:
@@ -44,7 +44,8 @@ def _sync_playlist_to_device(
     os.makedirs(playlist_folder_path, exist_ok=True)
     print(f"[Device Sync] Created folder: {playlist_folder_path}")
 
-    for video in playlist.videos:
+    # Copy newest/last-added items first so files land on the device in descending order
+    for video in videos_in_desc_order:
         video_id = video.id
 
         if video_id not in library_info.videos:
@@ -74,7 +75,7 @@ def _sync_playlist_to_device(
         id=playlist.id,
         title=playlist_title,
         playlist_hash=current_hash,
-        video_count=len(playlist.videos),
+        video_count=len(videos_in_desc_order),
     )
 
 
