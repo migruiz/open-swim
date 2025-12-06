@@ -1,9 +1,10 @@
 import json
 import time
-from typing import Any
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 
+from open_swim.config import config
 from open_swim.device.monitor import DeviceMonitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
 from open_swim.sync import enqueue_sync
@@ -13,8 +14,19 @@ from open_swim.messaging.mqtt import MqttClient
 
 load_dotenv()
 
+# Module-level device monitor instance for access by other modules
+_device_monitor: Optional[DeviceMonitor] = None
+
+
+def get_device_monitor() -> Optional[DeviceMonitor]:
+    """Get the device monitor instance."""
+    return _device_monitor
+
 
 def run() -> None:
+    global _device_monitor
+
+    config.validate_required()
     print("Open Swim running. Hello arm64 world!")
 
     mqtt_client: MqttClient = MqttClient(
@@ -24,14 +36,12 @@ def run() -> None:
         ),
     )
 
-    device_monitor = DeviceMonitor(
-        on_connected=lambda device, mount_point: _publish_device_status(
-            mqtt_client, "connected", device, mount_point
-        ),
+    _device_monitor = DeviceMonitor(
+        on_connected=lambda device, mount_point: _on_device_connected(mqtt_client, device, mount_point),
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
 
-    device_monitor.start_monitoring()
+    #_device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()
@@ -41,7 +51,7 @@ def run() -> None:
         print(f"Error: {exc}")
     finally:
         mqtt_client.disconnect()
-        device_monitor.stop_monitoring()
+        _device_monitor.stop_monitoring()
 
 
 def _on_mqtt_connected(mqtt_client: MqttClient) -> None:
@@ -61,6 +71,16 @@ def _on_mqtt_message(topic: str, message: Any, mqtt_client: MqttClient) -> None:
         case _:
             print(f"[MQTT] Unhandled topic {topic}")
 
+
+def _on_device_connected(mqtt_client: MqttClient, device: str, mount_point: str) -> None:
+    """Handle device connected event."""
+    print(f"[DEVICE] Device connected: {device} at {mount_point}")
+    
+    enqueue_sync()
+    
+    _publish_device_status(
+        mqtt_client=mqtt_client, status="connected", device=device, mount_point=mount_point
+    )
 
 def _publish_device_status(
     mqtt_client: MqttClient, status: str, device: str | None = None, mount_point: str | None = None

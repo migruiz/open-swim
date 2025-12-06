@@ -1,13 +1,12 @@
 import os
 from pydantic import BaseModel
 
+from open_swim.config import config
+
+
 class PlaylistToSync(BaseModel):
-    id: str    
-    playlist_url: str
+    id: str
     title: str
-    
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")
   
 def update_playlists_to_sync(json_payload: str) -> None:
     """Persist the requested playlists to sync."""
@@ -25,15 +24,15 @@ def _convert_json_to_playlist_list(json_payload: str) -> list[PlaylistToSync]:
 def _save_playlists_to_sync(playlists: list[PlaylistToSync]) -> None:
     """Save the list of playlists to sync to a JSON file."""
     import json
-    os.makedirs(youtube_library_path, exist_ok=True)
-    library_file_path = os.path.join(youtube_library_path, "playlists_to_sync.json")
+    os.makedirs(config.youtube_library_path, exist_ok=True)
+    library_file_path = os.path.join(config.youtube_library_path, "playlists_to_sync.json")
     with open(library_file_path, "w", encoding="utf-8") as f:
         json.dump([playlist.model_dump() for playlist in playlists], f, default=str, indent=2)
 
 def load_playlists_to_sync() -> list[PlaylistToSync]:
     """Load the list of playlists to sync from a JSON file."""
     import json
-    library_file_path = os.path.join(youtube_library_path, "playlists_to_sync.json")
+    library_file_path = os.path.join(config.youtube_library_path, "playlists_to_sync.json")
     if os.path.exists(library_file_path):
         with open(library_file_path, "r", encoding="utf-8") as f:
             data = json.load(f)

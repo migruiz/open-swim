@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import shutil
 import os
@@ -17,6 +18,7 @@ from open_swim.media.podcast.episodes_to_sync import EpisodeToSync, load_episode
 class EpisodeMp3Info(BaseModel):
     id: str
     title: str
+    date: datetime
     episode_dir: str
 
 
@@ -29,8 +31,7 @@ class LibraryData(BaseModel):
         return cls(episodes=episodes)
 
 
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-podcasts_library_path = os.path.join(LIBRARY_PATH, "podcasts")
+from open_swim.config import config
 
 
 
@@ -46,7 +47,7 @@ def sync_podcast_episodes() -> None:
 
 def _process_podcast_episode(episode: EpisodeToSync) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
-    library_info = _load_library_info()
+    library_info = load_library_info()
     if episode.id in library_info.episodes:
         print(f"Episode {episode.id} already processed. Skipping.")
         return
@@ -73,6 +74,7 @@ def _process_podcast_episode(episode: EpisodeToSync) -> None:
         library_info.episodes[episode.id] = EpisodeMp3Info(
             id=episode.id,
             title=episode.title,
+            date= episode.date,
             episode_dir=str(episode_dir)
         )
         _save_library_info(library_info)
@@ -84,19 +86,20 @@ def _get_library_episode_directory(episode: EpisodeToSync) -> Path:
     episode_folder = episode.title + "_" + episode.id
     episode_folder = re.sub(r'[^\w\s-]', '', episode_folder)
     episode_folder = re.sub(r'[\s]+', '_', episode_folder.strip())
-    episode_dir = Path(podcasts_library_path) / episode_folder
+    episode_dir = Path(config.podcasts_library_path) / episode_folder
     return episode_dir
 
 
 def _save_library_info(library_data: LibraryData) -> None:
-    info_json_path = os.path.join(podcasts_library_path, "info.json")
+    info_json_path = os.path.join(config.podcasts_library_path, "info.json")
     with open(info_json_path, "w", encoding="utf-8") as f:
-        json.dump(library_data.model_dump(), f, indent=2)
+        # Use JSON-friendly dump so datetimes serialize as ISO strings
+        json.dump(library_data.model_dump(mode="json"), f, indent=2)
     print(f"[Info JSON] Saved library info to {info_json_path}")
 
 
-def _load_library_info() -> LibraryData:
-    info_json_path = os.path.join(podcasts_library_path, "info.json")
+def load_library_info() -> LibraryData:
+    info_json_path = os.path.join(config.podcasts_library_path, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
             data = json.load(f)

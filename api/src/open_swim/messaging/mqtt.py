@@ -1,7 +1,8 @@
-import os
 from typing import Any, Optional, Protocol
 
 import paho.mqtt.client as mqtt
+
+from open_swim.config import config
 
 
 class ConnectCallback(Protocol):
@@ -55,8 +56,8 @@ class MqttClient:
 
     def connect_and_listen(self, broker_uri: Optional[str] = None) -> None:
         """Connect to the MQTT broker and block while listening."""
-        # Get broker URI from parameter or environment
-        broker = broker_uri or os.getenv("MQTT_BROKER_URI")
+        # Get broker URI from parameter or config
+        broker = broker_uri or config.mqtt_broker_uri
         if not broker:
             raise ValueError(
                 "MQTT_BROKER_URI not provided and not set in environment variables"

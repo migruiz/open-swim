@@ -6,10 +6,8 @@ from typing import Dict
 
 from pydantic import BaseModel
 
+from open_swim.config import config
 from open_swim.media.youtube.playlists import YoutubeVideo
-
-LIBRARY_PATH = os.getenv('LIBRARY_PATH', '/library')
-youtube_library_path = os.path.join(LIBRARY_PATH, "youtube")
 
 class LibraryMp3Info(BaseModel):
     video_id: str
@@ -32,7 +30,7 @@ def get_library_video_info(video_id: str) -> LibraryMp3Info | None:
 
 
 def load_library_info() -> LibraryData:
-    info_json_path = os.path.join(youtube_library_path, "info.json")
+    info_json_path = os.path.join(config.youtube_library_path, "info.json")
     if os.path.exists(info_json_path):
         with open(info_json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -47,7 +45,7 @@ def load_library_info() -> LibraryData:
 
 def _save_normalized_file_to_library(temp_normalized_mp3_path: str, youtube_video: YoutubeVideo) -> str:
     # Ensure /library/ directory exists
-    os.makedirs(youtube_library_path, exist_ok=True)
+    os.makedirs(config.youtube_library_path, exist_ok=True)
 
     # Sanitize title to remove special characters
     sanitized_title = re.sub(r'[^\w\s-]', '', youtube_video.title)
@@ -55,7 +53,7 @@ def _save_normalized_file_to_library(temp_normalized_mp3_path: str, youtube_vide
     
     # Create filename in format: [title]__normalized__[videoId].mp3
     filename = f"{sanitized_title}__normalized__{youtube_video.id}.mp3"
-    destination_path = os.path.join(youtube_library_path, filename)
+    destination_path = os.path.join(config.youtube_library_path, filename)
     
     # Copy the downloaded MP3 file to /library/
     shutil.copy2(temp_normalized_mp3_path, destination_path)
@@ -64,7 +62,7 @@ def _save_normalized_file_to_library(temp_normalized_mp3_path: str, youtube_vide
 
 
 def _save_library_info(library_data: LibraryData) -> None:
-    info_json_path = os.path.join(youtube_library_path, "info.json")
+    info_json_path = os.path.join(config.youtube_library_path, "info.json")
     with open(info_json_path, "w", encoding="utf-8") as f:
         json.dump(library_data.model_dump(), f, indent=2)
     print(f"[Info JSON] Saved library info to {info_json_path}")

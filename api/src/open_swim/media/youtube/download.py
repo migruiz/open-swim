@@ -3,6 +3,8 @@ from pathlib import Path
 import secrets
 import subprocess
 
+from open_swim.config import config
+
 
 def download_audio(tmp_path: Path, video_id: str) -> str:
     """Download a YouTube video as an MP3 to a temp path and return the filepath."""
@@ -12,9 +14,8 @@ def download_audio(tmp_path: Path, video_id: str) -> str:
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     output_path = tmp_path / f"{secrets.token_hex(16)}.mp3"
 
-    yt_dlp_cmd = os.getenv("YTDLP_PATH", "yt-dlp")
     command = [
-        yt_dlp_cmd,
+        config.ytdlp_path,
         "-x",
         "--audio-format",
         "mp3",

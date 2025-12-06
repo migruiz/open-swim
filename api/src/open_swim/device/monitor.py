@@ -4,10 +4,10 @@ import threading
 import time
 from typing import Optional, Protocol
 
+from open_swim.config import config
 from open_swim.device.mount import mount_volume, unmount_volume
 
 OPEN_SWIM_LABEL = "OpenSwim"
-MOUNT_POINT = "/mnt/openswim"
 
 
 class DeviceConnectedCallback(Protocol):
@@ -108,14 +108,15 @@ class DeviceMonitor:
 
         if found_dev and not self.connected:
             # Device plugged in
-            if mount_volume(found_dev, MOUNT_POINT):
+            mount_point = config.device_sd_path
+            if mount_volume(found_dev, mount_point):
                 self.connected = True
                 self.current_dev = found_dev
-                self.on_connected(device=found_dev, mount_point=MOUNT_POINT)
+                self.on_connected(device=found_dev, mount_point=mount_point)
 
         if self.connected and (not found_dev):
             # Device unplugged
-            unmount_volume(MOUNT_POINT)
+            unmount_volume(config.device_sd_path)
             self.connected = False
             self.current_dev = None
             self.on_disconnected()
