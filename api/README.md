@@ -38,14 +38,14 @@ PY
 ```
 
 ## MQTT contract
-- Subscribes: `openswim/episodes_to_sync` (JSON array of `{id, date, download_url, title}`); `openswim/playlists_to_sync` (JSON array of `{id}` where id is the playlist id).
+- Subscribes: `openswim/episodes_to_sync` (JSON array of `{id, date, download_url, title}`); `openswim/playlists_to_sync` (JSON array of `{id, title}` where id is the playlist id).
 - Publishes: `openswim/device/status` with `status` (`connected`/`disconnected`), `device`, `mount_point`, and a timestamp; retained to advertise current state.
 
 ## Library and device layout
-- `LIBRARY_PATH/podcasts/episodes_to_sync.json` – persisted incoming podcast requests
-- `LIBRARY_PATH/podcasts/info.json` – known processed episodes and their output folders
-- `LIBRARY_PATH/youtube/playlists_to_sync.json` – playlist ids requested for sync
-- `LIBRARY_PATH/youtube/info.json` – normalized YouTube tracks and their paths
+- `LIBRARY_PATH/podcasts/episodes_to_sync.json`: persisted incoming podcast requests
+- `LIBRARY_PATH/podcasts/info.json`: known processed episodes and their output folders
+- `LIBRARY_PATH/youtube/playlists_to_sync.json`: playlist ids requested for sync
+- `LIBRARY_PATH/youtube/info.json`: normalized YouTube tracks and their paths
 - Device sync writes one folder per playlist to `OPEN_SWIM_SD_PATH` and stores `sync.json` inside each to record the last synced hash.
 
 ## Containers
@@ -55,4 +55,4 @@ PY
 ## Development notes
 - Entry point: `src/open_swim/app.py`; CLI shim: `src/open_swim/main.py`.
 - Background sync queue is started at import time in `open_swim.sync`; long-running calls (ffmpeg, yt-dlp, Piper) occur inside worker tasks.
-- Device detection is Linux-specific (`blkid`/`mount`/`umount`). On other OSes you may need to provide `OPEN_SWIM_SD_PATH` and bypass `DeviceMonitor`.
+- Device detection is Linux-specific (`blkid`/`mount`/`umount`). On Windows the monitor is skipped; on Linux/RPi/container it auto-starts. Set `OPEN_SWIM_SD_PATH` when running without the monitor.

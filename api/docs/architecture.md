@@ -10,7 +10,7 @@ Open Swim is a long-running worker that reacts to MQTT messages, shapes media in
 ## MQTT contract
 - Subscribed topics
   - `openswim/episodes_to_sync`: JSON array of podcast episodes (`id`, ISO `date`, `download_url`, `title`). Persisted to `LIBRARY_PATH/podcasts/episodes_to_sync.json`.
-  - `openswim/playlists_to_sync`: JSON array of playlist ids (`id`). Persisted to `LIBRARY_PATH/youtube/playlists_to_sync.json`.
+  - `openswim/playlists_to_sync`: JSON array of playlist ids and titles (`id`, `title`). Persisted to `LIBRARY_PATH/youtube/playlists_to_sync.json`.
 - Published topic
   - `openswim/device/status` (retained): `{status, device, mount_point, timestamp}` whenever the device mounts/unmounts and on startup once the MQTT client is ready.
 
@@ -29,7 +29,7 @@ Open Swim is a long-running worker that reacts to MQTT messages, shapes media in
 4. Library metadata is kept in `LIBRARY_PATH/youtube/info.json` keyed by video id for quick “already downloaded” checks.
 
 ## Device detection and sync
-- `DeviceMonitor` (Linux-only) scans `/dev/*` for block devices labeled `OpenSwim`, mounts them at `/mnt/openswim` (or OS default), and emits connect/disconnect callbacks. Mount/unmount uses `mount`/`umount`.
+- `DeviceMonitor` (Linux-only) scans `/dev/*` for block devices labeled `OpenSwim`, mounts them at `/mnt/openswim` (or OS default), and emits connect/disconnect callbacks. Mount/unmount uses `mount`/`umount`. On Windows dev hosts the monitor is skipped; set `OPEN_SWIM_SD_PATH` to point at the device mount when running without it.
 - `sync_device_playlists()` copies normalized tracks onto the device:
   - Builds one folder per playlist using a sanitized title.
   - Computes a deterministic hash of ordered video ids; if unchanged compared to the playlist’s `sync.json` the copy is skipped.

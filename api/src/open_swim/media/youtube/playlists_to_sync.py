@@ -1,40 +1,21 @@
-import os
-from pydantic import BaseModel
+import json
 
-from open_swim.config import config
+from open_swim.media.youtube.models import PlaylistRequest
+from open_swim.media.youtube import store
 
 
-class PlaylistToSync(BaseModel):
-    id: str
-    title: str
-  
 def update_playlists_to_sync(json_payload: str) -> None:
     """Persist the requested playlists to sync."""
     playlists = _convert_json_to_playlist_list(json_payload)
-    _save_playlists_to_sync(playlists)
+    store.save_playlist_requests(playlists)
 
-def _convert_json_to_playlist_list(json_payload: str) -> list[PlaylistToSync]:
-    """Convert JSON string to a list of PlaylistToSync objects."""
-    import json
+
+def _convert_json_to_playlist_list(json_payload: str) -> list[PlaylistRequest]:
+    """Convert JSON string to a list of PlaylistRequest objects."""
     data = json.loads(json_payload)
-    playlist_list = [PlaylistToSync(**item) for item in data]
-    return playlist_list
+    return [PlaylistRequest(**item) for item in data]
 
 
-def _save_playlists_to_sync(playlists: list[PlaylistToSync]) -> None:
-    """Save the list of playlists to sync to a JSON file."""
-    import json
-    os.makedirs(config.youtube_library_path, exist_ok=True)
-    library_file_path = os.path.join(config.youtube_library_path, "playlists_to_sync.json")
-    with open(library_file_path, "w", encoding="utf-8") as f:
-        json.dump([playlist.model_dump() for playlist in playlists], f, default=str, indent=2)
-
-def load_playlists_to_sync() -> list[PlaylistToSync]:
+def load_playlists_to_sync() -> list[PlaylistRequest]:
     """Load the list of playlists to sync from a JSON file."""
-    import json
-    library_file_path = os.path.join(config.youtube_library_path, "playlists_to_sync.json")
-    if os.path.exists(library_file_path):
-        with open(library_file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return [PlaylistToSync(**item) for item in data]
-    return []
+    return store.load_playlist_requests()

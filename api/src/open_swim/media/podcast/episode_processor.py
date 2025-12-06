@@ -4,14 +4,10 @@ from pathlib import Path
 from typing import List
 
 from open_swim.config import config
-from open_swim.media.podcast.episodes_to_sync import EpisodeToSync
-  
+from open_swim.media.podcast.models import EpisodeRequest
 
 
-
-
-
-def get_episode_segments(episode: EpisodeToSync, episode_path: Path, tmp_path: Path) -> List[Path]:
+def get_episode_segments(episode: EpisodeRequest, episode_path: Path, tmp_path: Path) -> List[Path]:
     """Split a podcast episode, generate intros, and merge segments."""
     print("Splitting podcast into 10-minute segments...")
     segment_paths = _split_podcast_episode(episode_path=episode_path, output_dir=tmp_path)
@@ -58,7 +54,7 @@ def _split_podcast_episode(episode_path: Path, output_dir: Path) -> List[Path]:
     return segments
 
 
-def _generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output_dir: Path) -> Path:
+def _generate_audio_intro(episode: EpisodeRequest, index: int, total: int, output_dir: Path) -> Path:
     """Generate an intro audio segment for the given index out of total segments. e.g. "1 of 5"
     Returns path to the generated audio file.
     Uses piper to generate the audio in the format: "{index}_of_{total}.mp3"
@@ -94,7 +90,7 @@ def _generate_audio_intro(episode: EpisodeToSync, index: int, total: int, output
     return mp3_output
 
 
-def _merge_intro_and_segment(episode: EpisodeToSync, segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
+def _merge_intro_and_segment(episode: EpisodeRequest, segment_path: Path, intro_path: Path, output_dir: Path, index: int) -> Path:
     """Merge intro audio and segment into a single audio file with 1 second silence between them.
     Returns path to the merged file."""
     sanitized_title = re.sub(r'[^\w\s-]', '', episode.title)

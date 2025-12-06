@@ -1,5 +1,6 @@
 import json
 import time
+import sys
 from typing import Any, Optional
 
 from dotenv import load_dotenv
@@ -37,11 +38,16 @@ def run() -> None:
     )
 
     _device_monitor = DeviceMonitor(
-        on_connected=lambda device, mount_point: _on_device_connected(mqtt_client, device, mount_point),
+        on_connected=lambda device, mount_point: _on_device_connected(
+            mqtt_client, device, mount_point
+        ),
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
 
-    #_device_monitor.start_monitoring()
+    if sys.platform == "win32":
+        print("[DEVICE] Skipping device monitoring on Windows host.")
+    else:
+        _device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()

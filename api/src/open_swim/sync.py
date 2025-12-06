@@ -21,7 +21,7 @@ def _sync_worker() -> None:
         try:
             task()
         except Exception as exc:  # pragma: no cover - best effort logging only
-            print(f"Podcast sync task failed: {exc}")
+            print(f"Sync task failed: {exc}")
             #print the stack trace
             import traceback
             traceback.print_exc()
