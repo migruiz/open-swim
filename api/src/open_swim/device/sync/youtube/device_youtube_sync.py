@@ -1,11 +1,11 @@
 import os
-import re
 import shutil
 import json
 import hashlib
 from typing import List, Dict, Any
 
 from open_swim.config import config
+from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.media.youtube.library import LibraryData, load_library_info
 from open_swim.media.youtube.playlists import PlaylistInfo
 
@@ -37,9 +37,7 @@ def _save_device_sync_info(playlist_folder_path: str, sync_data: Dict[str, Any])
 
 def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, device_sdcard_path: str) -> None:
     
-        # Sanitize playlist title to remove special characters
-        playlist_title = re.sub(r'[<>:"/\\|?*]', '_', playlist.title)
-        playlist_title = playlist_title.strip()
+        playlist_title = sanitize_playlist_title(playlist.title)
         playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
     
         # Load existing device sync info
@@ -108,7 +106,7 @@ def _sync_playlist_to_device(playlist: PlaylistInfo, library_info: LibraryData, 
         # Update device_sync.json with current playlist info and hash
         sync_data[playlist_key] = {
             "playlist_id": playlist.id,
-            "playlist_title": playlist.title,
+            "playlist_title": playlist_title,
             "playlist_hash": current_hash,
             "video_count": len(playlist.videos),
             "uploader": playlist.uploader,

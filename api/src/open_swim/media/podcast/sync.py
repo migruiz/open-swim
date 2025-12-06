@@ -121,7 +121,7 @@ def _download_podcast(url: str, output_dir: Path) -> Path:
     """Download podcast from the given URL.
     Returns the path to the downloaded file."""
 
-    response = requests.get(url, stream=True)
+    response = requests.get(url, stream=True, timeout=30)
     response.raise_for_status()
 
     # Generate filename from URL or use a default

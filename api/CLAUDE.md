@@ -32,13 +32,13 @@ Long-running MQTT worker that normalizes YouTube playlists and podcast episodes 
 
 **State management (file-based):**
 - `LIBRARY_PATH/youtube/info.json` - Downloaded/normalized YouTube videos (keyed by video ID)
-- `LIBRARY_PATH/youtube/playlists_to_sync.json` - Requested playlist IDs
+- `LIBRARY_PATH/youtube/playlists_to_sync.json` - Requested playlist IDs + titles
 - `LIBRARY_PATH/podcasts/info.json` - Processed podcast episodes
 - `LIBRARY_PATH/podcasts/episodes_to_sync.json` - Requested episodes
 - Device `sync.json` per playlist folder - SHA256 hash of video IDs for change detection
 
 **MQTT contract:**
-- Subscribe: `openswim/episodes_to_sync` (JSON array), `openswim/playlists_to_sync` (JSON array)
+- Subscribe: `openswim/episodes_to_sync` (JSON array), `openswim/playlists_to_sync` (JSON array of `{id, title}`)
 - Publish: `openswim/device/status` (retained) with connect/disconnect events
 
 ## External Dependencies
@@ -55,7 +55,7 @@ Requires on PATH (or via env vars): `yt-dlp`, `ffmpeg`, `piper` with voice model
 
 ## Development Notes
 
-- DeviceMonitor is Linux-only (uses `blkid`/`mount`/`umount`). On Windows/macOS, set `OPEN_SWIM_SD_PATH` and avoid monitor/eject flows.
+- DeviceMonitor is Linux-only (uses `blkid`/`mount`/`umount`). On Windows it is skipped; on Linux/RPi/container it auto-starts. Set `OPEN_SWIM_SD_PATH` when running without the monitor.
 - Download-heavy steps (yt-dlp, ffmpeg, Piper) trigger significant network/CPU; avoid during code review.
 - Syncing to device wipes and recreates playlist folders before copying; use test media when experimenting.
 - Delete `info.json` files to clear cached library state.

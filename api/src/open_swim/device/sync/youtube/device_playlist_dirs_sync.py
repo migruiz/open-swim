@@ -6,13 +6,21 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 from open_swim.config import config
+from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.media.youtube.playlists import PlaylistInfo
 
 
+class DevicePlaylistEntry(BaseModel):
+    """Playlist information saved on the device."""
+
+    id: str
+    title: str
+
+
 class DeviceSyncInfo(BaseModel):
-    """Has the current state of the device sync information.
-    This is stored in device_sync.json on the device's SD card."""
-    playlists: List[PlaylistInfo] = Field(default_factory=list)
+    """Current state of device sync information (stored on SD card)."""
+
+    playlists: List[DevicePlaylistEntry] = Field(default_factory=list)
 
 
 def sync_playlists_directories(playlists_to_sync: List[PlaylistInfo]) -> None:
@@ -39,23 +47,30 @@ def _prepare_device_directories(
     for playlist in device_info.playlists:
         if playlist.id in playlists_to_sync_by_id:
             continue
-        playlist_path = os.path.join(sd_card_path, playlist.title)
+        sanitized_title = sanitize_playlist_title(playlist.title)
+        playlist_path = os.path.join(sd_card_path, sanitized_title)
         if os.path.exists(playlist_path):
             shutil.rmtree(playlist_path)
             print(
                 f"[Device Sync] Removed playlist folder no longer requested: {playlist_path}")
 
     # Ensure all requested playlists exist on device and update device info
-    updated_playlists: List[PlaylistInfo] = []
+    updated_playlists: List[DevicePlaylistEntry] = []
     for playlist in playlists_to_sync:
-        if playlist.id not in existing_playlists_by_id:
-            playlist_path = os.path.join(sd_card_path, playlist.title)
+        sanitized_title = sanitize_playlist_title(playlist.title)
+        playlist_path = os.path.join(sd_card_path, sanitized_title)
+
+        if playlist.id not in existing_playlists_by_id and not os.path.exists(playlist_path):
             os.makedirs(playlist_path, exist_ok=True)
             print(f"[Device Sync] Created playlist folder: {playlist_path}")
-        updated_playlists.append(PlaylistInfo(
-            id=playlist.id, title=playlist.title))
+        updated_playlists.append(
+            DevicePlaylistEntry(
+                id=playlist.id,
+                title=sanitized_title,
+            )
+        )
 
-    _save_device_sync_info(sd_card_path, device_info)
+    _save_device_sync_info(sd_card_path, DeviceSyncInfo(playlists=updated_playlists))
 
 
 def _load_device_sync_info(sd_card_path: str) -> DeviceSyncInfo:
