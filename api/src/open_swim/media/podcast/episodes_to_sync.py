@@ -1,42 +1,21 @@
-from datetime import datetime
-import os
-from pydantic import BaseModel
+import json
 
-from open_swim.config import config
+from open_swim.media.podcast.models import EpisodeRequest
+from open_swim.media.podcast import store
 
-
-class EpisodeToSync(BaseModel):
-    id: str
-    date: datetime
-    download_url: str
-    title: str
-    
-def _save_episodes_to_sync(episodes: list[EpisodeToSync]) -> None:
-    """Save the list of episodes to sync to a JSON file."""
-    import json
-    os.makedirs(config.podcasts_library_path, exist_ok=True)
-    library_file_path = os.path.join(config.podcasts_library_path, "episodes_to_sync.json")
-    with open(library_file_path, "w", encoding="utf-8") as f:
-        json.dump([episode.model_dump() for episode in episodes], f, default=str, indent=2)
-
-def load_episodes_to_sync() -> list[EpisodeToSync]:
-    """Load the list of episodes to sync from a JSON file."""
-    import json
-    library_file_path = os.path.join(config.podcasts_library_path, "episodes_to_sync.json")
-    if os.path.exists(library_file_path):
-        with open(library_file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return [EpisodeToSync(**item) for item in data]
-    return []
 
 def update_episodes_to_sync(json_payload: str) -> None:
     """Persist requested episodes to sync."""
     episodes = _convert_json_to_episode_list(json_payload)
-    _save_episodes_to_sync(episodes)
+    store.save_episode_requests(episodes)
 
-def _convert_json_to_episode_list(json_payload: str) -> list[EpisodeToSync]:
-    """Convert JSON string to a list of EpisodeToSync objects."""
-    import json
+
+def _convert_json_to_episode_list(json_payload: str) -> list[EpisodeRequest]:
+    """Convert JSON string to a list of EpisodeRequest objects."""
     data = json.loads(json_payload)
-    episode_list = [EpisodeToSync(**item) for item in data]
-    return episode_list
+    return [EpisodeRequest(**item) for item in data]
+
+
+def load_episodes_to_sync() -> list[EpisodeRequest]:
+    """Load the list of episodes to sync from a JSON file."""
+    return store.load_episode_requests()
