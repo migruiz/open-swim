@@ -6,7 +6,7 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 
 from open_swim.config import config
-from open_swim.device.monitor import DeviceMonitor
+from open_swim.device import create_device_monitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
 from open_swim.sync import enqueue_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
@@ -16,10 +16,10 @@ from open_swim.messaging.mqtt import MqttClient
 load_dotenv()
 
 # Module-level device monitor instance for access by other modules
-_device_monitor: Optional[DeviceMonitor] = None
+_device_monitor = None
 
 
-def get_device_monitor() -> Optional[DeviceMonitor]:
+def get_device_monitor() -> Optional[Any]:
     """Get the device monitor instance."""
     return _device_monitor
 
@@ -37,17 +37,14 @@ def run() -> None:
         ),
     )
 
-    _device_monitor = DeviceMonitor(
+    _device_monitor = create_device_monitor(
         on_connected=lambda device, mount_point: _on_device_connected(
             mqtt_client, device, mount_point
         ),
         on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
     )
 
-    if sys.platform == "win32":
-        print("[DEVICE] Skipping device monitoring on Windows host.")
-    else:
-        _device_monitor.start_monitoring()
+    _device_monitor.start_monitoring()
 
     try:
         mqtt_client.connect_and_listen()
