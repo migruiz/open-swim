@@ -15,8 +15,9 @@ from open_swim.messaging.mqtt import MqttClient
 
 load_dotenv()
 
-# Module-level device monitor instance for access by other modules
+# Module-level instances for access by callbacks
 _device_monitor = None
+_mqtt_client: MqttClient | None = None
 
 
 def get_device_monitor() -> Optional[Any]:
@@ -25,33 +26,31 @@ def get_device_monitor() -> Optional[Any]:
 
 
 def run() -> None:
-    global _device_monitor
+    global _device_monitor, _mqtt_client
 
     config.validate_required()
     print("Open Swim running. Hello arm64 world!")
 
-    mqtt_client: MqttClient = MqttClient(
+    _mqtt_client = MqttClient(
         on_connect_callback=_on_mqtt_connected,
         on_message_callback=_on_mqtt_message,
     )
 
     _device_monitor = create_device_monitor(
-        on_connected=lambda device, mount_point: _on_device_connected(
-            mqtt_client, device, mount_point
-        ),
-        on_disconnected=lambda: _publish_device_status(mqtt_client, "disconnected"),
+        on_connected=_on_device_connected,
+        on_disconnected=_on_device_disconnected,
     )
 
     _device_monitor.start_monitoring()
 
     try:
-        mqtt_client.connect_and_listen()
+        _mqtt_client.connect_and_listen()
     except KeyboardInterrupt:
         print("\nShutting down...")
     except Exception as exc:
         print(f"Error: {exc}")
     finally:
-        mqtt_client.disconnect()
+        _mqtt_client.disconnect()
         _device_monitor.stop_monitoring()
 
 
@@ -73,21 +72,26 @@ def _on_mqtt_message(client: MqttClient, topic: str, message: Any) -> None:
             print(f"[MQTT] Unhandled topic {topic}")
 
 
-def _on_device_connected(mqtt_client: MqttClient, device: str, mount_point: str) -> None:
+def _on_device_connected(monitor: Any, device: str, mount_point: str) -> None:
     """Handle device connected event."""
     print(f"[DEVICE] Device connected: {device} at {mount_point}")
-    
+
     enqueue_sync()
-    
-    _publish_device_status(
-        mqtt_client=mqtt_client, status="connected", device=device, mount_point=mount_point
-    )
+
+    _publish_device_status(status="connected", device=device, mount_point=mount_point)
+
+
+def _on_device_disconnected(monitor: Any) -> None:
+    """Handle device disconnected event."""
+    print("[DEVICE] Device disconnected")
+    _publish_device_status(status="disconnected")
+
 
 def _publish_device_status(
-    mqtt_client: MqttClient, status: str, device: str | None = None, mount_point: str | None = None
+    status: str, device: str | None = None, mount_point: str | None = None
 ) -> None:
     """Publish device status change to MQTT."""
-    if mqtt_client.client is None:
+    if _mqtt_client is None or _mqtt_client.client is None:
         print("[MQTT] Skipping device status publish; client not connected yet.")
         return
 
@@ -100,7 +104,7 @@ def _publish_device_status(
             "timestamp": time.time(),
         }
     )
-    mqtt_client.publish(topic, payload, qos=1, retain=True)
+    _mqtt_client.publish(topic, payload, qos=1, retain=True)
     print(f"[MQTT] Published {status} event to {topic}")
 
 
