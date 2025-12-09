@@ -2,7 +2,7 @@ import os
 import subprocess
 import threading
 import time
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
 from open_swim.config import config
 from open_swim.device.linux.mount import mount_volume, unmount_volume
@@ -13,14 +13,14 @@ OPEN_SWIM_LABEL = "OpenSwim"
 class DeviceConnectedCallback(Protocol):
     """Protocol for device connected callback."""
 
-    def __call__(self, device: str, mount_point: str) -> None:
+    def __call__(self, monitor: Any, device: str, mount_point: str) -> None:
         ...
 
 
 class DeviceDisconnectedCallback(Protocol):
     """Protocol for device disconnected callback."""
 
-    def __call__(self) -> None:
+    def __call__(self, monitor: Any) -> None:
         ...
 
 
@@ -112,11 +112,11 @@ class LinuxDeviceMonitor:
             if mount_volume(found_dev, mount_point):
                 self.connected = True
                 self.current_dev = found_dev
-                self.on_connected(device=found_dev, mount_point=mount_point)
+                self.on_connected(self, device=found_dev, mount_point=mount_point)
 
         if self.connected and (not found_dev):
             # Device unplugged
             unmount_volume(config.device_sd_path)
             self.connected = False
             self.current_dev = None
-            self.on_disconnected()
+            self.on_disconnected(self)
