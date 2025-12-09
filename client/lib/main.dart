@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/mqtt_service.dart';
+import 'services/update_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,8 +34,14 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   final MqttService _mqttService = MqttService();
+  final UpdateService _updateService = UpdateService();
   AppMqttConnectionState _connectionState = AppMqttConnectionState.disconnected;
   final List<String> _messages = [];
+
+  // Update state
+  UpdateInfo? _updateInfo;
+  bool _isDownloading = false;
+  double _downloadProgress = 0;
 
   StreamSubscription<AppMqttConnectionState>? _connectionStateSubscription;
   StreamSubscription<String>? _messagesSubscription;
@@ -60,6 +67,44 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Initial connection
     _mqttService.connect();
+
+    // Check for updates
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final updateInfo = await _updateService.checkForUpdate();
+    if (updateInfo != null && mounted) {
+      setState(() {
+        _updateInfo = updateInfo;
+      });
+    }
+  }
+
+  Future<void> _downloadUpdate() async {
+    if (_updateInfo == null || _isDownloading) return;
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+    });
+
+    await _updateService.downloadAndInstall(
+      _updateInfo!.downloadUrl,
+      onProgress: (progress) {
+        if (mounted) {
+          setState(() {
+            _downloadProgress = progress;
+          });
+        }
+      },
+    );
+
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+      });
+    }
   }
 
   @override
@@ -120,6 +165,46 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Widget _buildUpdateBanner() {
+    if (_updateInfo == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      color: Colors.blue.shade100,
+      child: Row(
+        children: [
+          const Icon(Icons.system_update, color: Colors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Update available: v${_updateInfo!.version}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (_isDownloading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: LinearProgressIndicator(value: _downloadProgress),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (!_isDownloading)
+            ElevatedButton(
+              onPressed: _downloadUpdate,
+              child: const Text('Update'),
+            )
+          else
+            Text('${(_downloadProgress * 100).toInt()}%'),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,82 +212,91 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Connection status with manual reconnect
-            GestureDetector(
-              onTap: _connectionState == AppMqttConnectionState.disconnected
-                  ? () => _mqttService.reconnect()
-                  : null,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _getConnectionColor().withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _getConnectionColor()),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildConnectionIcon(),
-                    const SizedBox(width: 8),
-                    Text(
-                      _getConnectionText(),
-                      style: TextStyle(
-                        color: _getConnectionColor(),
-                        fontWeight: FontWeight.bold,
+      body: Column(
+        children: [
+          _buildUpdateBanner(),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Connection status with manual reconnect
+                  GestureDetector(
+                    onTap:
+                        _connectionState == AppMqttConnectionState.disconnected
+                            ? () => _mqttService.reconnect()
+                            : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _getConnectionColor().withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _getConnectionColor()),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildConnectionIcon(),
+                          const SizedBox(width: 8),
+                          Text(
+                            _getConnectionText(),
+                            style: TextStyle(
+                              color: _getConnectionColor(),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_connectionState ==
+                              AppMqttConnectionState.disconnected) ...[
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.refresh,
+                              size: 18,
+                              color: _getConnectionColor(),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (_connectionState ==
-                        AppMqttConnectionState.disconnected) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.refresh,
-                        size: 18,
-                        color: _getConnectionColor(),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text('You have pushed the button this many times:'),
+                  Text(
+                    '$_counter',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 32),
+                  // Messages section
+                  if (_messages.isNotEmpty) ...[
+                    const Text(
+                      'Received Messages:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListView.builder(
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              dense: true,
+                              title: Text(_messages[index]),
+                            );
+                          },
+                        ),
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 32),
-            // Messages section
-            if (_messages.isNotEmpty) ...[
-              const Text(
-                'Received Messages:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListView.builder(
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        dense: true,
-                        title: Text(_messages[index]),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
