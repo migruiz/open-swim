@@ -8,14 +8,14 @@ from open_swim.config import config
 class ConnectCallback(Protocol):
     """Protocol for MQTT connect callback."""
 
-    def __call__(self) -> None:
+    def __call__(self, client: "MqttClient") -> None:
         ...
 
 
 class MessageCallback(Protocol):
     """Protocol for MQTT message callback."""
 
-    def __call__(self, topic: str, message: Any) -> None:
+    def __call__(self, client: "MqttClient", topic: str, message: Any) -> None:
         ...
 
 
@@ -42,7 +42,7 @@ class MqttClient:
         """Internal callback when the client connects to the broker."""
         if rc == 0:
             print("Connected to MQTT broker successfully")
-            self.on_connect_callback()
+            self.on_connect_callback(self)
         else:
             print(f"Failed to connect, return code {rc}")
 
@@ -52,7 +52,7 @@ class MqttClient:
         """Internal callback when a message is received."""
 
         print(f"Received message on topic '{msg.topic}': {msg.payload.decode()}")
-        self.on_message_callback(topic=msg.topic, message=msg.payload.decode())
+        self.on_message_callback(self, topic=msg.topic, message=msg.payload.decode())
 
     def connect_and_listen(self, broker_uri: Optional[str] = None) -> None:
         """Connect to the MQTT broker and block while listening."""

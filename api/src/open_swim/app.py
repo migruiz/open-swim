@@ -31,10 +31,8 @@ def run() -> None:
     print("Open Swim running. Hello arm64 world!")
 
     mqtt_client: MqttClient = MqttClient(
-        on_connect_callback=lambda: _on_mqtt_connected(mqtt_client),
-        on_message_callback=lambda topic, message: _on_mqtt_message(
-            topic, message, mqtt_client
-        ),
+        on_connect_callback=_on_mqtt_connected,
+        on_message_callback=_on_mqtt_message,
     )
 
     _device_monitor = create_device_monitor(
@@ -57,13 +55,13 @@ def run() -> None:
         _device_monitor.stop_monitoring()
 
 
-def _on_mqtt_connected(mqtt_client: MqttClient) -> None:
-    mqtt_client.subscribe("openswim/episodes_to_sync")
-    mqtt_client.subscribe("openswim/playlists_to_sync")
+def _on_mqtt_connected(client: MqttClient) -> None:
+    client.subscribe("openswim/episodes_to_sync")
+    client.subscribe("openswim/playlists_to_sync")
     enqueue_sync()
 
 
-def _on_mqtt_message(topic: str, message: Any, mqtt_client: MqttClient) -> None:
+def _on_mqtt_message(client: MqttClient, topic: str, message: Any) -> None:
     """Handle incoming MQTT messages."""
     print(f"[MQTT] Message received on topic '{topic}': {message}")
     match topic:
