@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/mqtt_service.dart';
 
@@ -8,30 +9,20 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Open Swim',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Open Swim - MQTT Demo'),
+      home: const MyHomePage(title: 'Open Swim'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -42,40 +33,90 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   final MqttService _mqttService = MqttService();
-  bool _isConnected = false;
-  List<String> _messages = [];
+  AppMqttConnectionState _connectionState = AppMqttConnectionState.disconnected;
+  final List<String> _messages = [];
+
+  StreamSubscription<AppMqttConnectionState>? _connectionStateSubscription;
+  StreamSubscription<String>? _messagesSubscription;
 
   @override
   void initState() {
     super.initState();
-    _connectToMqtt();
-    _mqttService.messages.listen((message) {
+
+    // Listen to connection state changes
+    _connectionStateSubscription =
+        _mqttService.connectionState.listen((state) {
+      setState(() {
+        _connectionState = state;
+      });
+    });
+
+    // Listen to messages
+    _messagesSubscription = _mqttService.messages.listen((message) {
       setState(() {
         _messages.add(message);
       });
     });
+
+    // Initial connection
+    _mqttService.connect();
   }
 
   @override
   void dispose() {
+    _connectionStateSubscription?.cancel();
+    _messagesSubscription?.cancel();
     _mqttService.dispose();
     super.dispose();
-  }
-
-  Future<void> _connectToMqtt() async {
-    final connected = await _mqttService.connect();
-    setState(() {
-      _isConnected = connected;
-    });
   }
 
   void _incrementCounter() {
     setState(() {
       _counter++;
     });
-    // Publish counter value to MQTT
-    if (_isConnected) {
-      _mqttService.publishMessage('openswim/device/status', 'Counter: $_counter');
+    if (_connectionState == AppMqttConnectionState.connected) {
+      _mqttService.publishMessage(
+          'openswim/device/status', 'Counter: $_counter');
+    }
+  }
+
+  Color _getConnectionColor() {
+    switch (_connectionState) {
+      case AppMqttConnectionState.connected:
+        return Colors.green.shade700;
+      case AppMqttConnectionState.connecting:
+        return Colors.orange.shade700;
+      case AppMqttConnectionState.disconnected:
+        return Colors.red.shade700;
+    }
+  }
+
+  String _getConnectionText() {
+    switch (_connectionState) {
+      case AppMqttConnectionState.connected:
+        return 'Connected to MQTT';
+      case AppMqttConnectionState.connecting:
+        return 'Connecting...';
+      case AppMqttConnectionState.disconnected:
+        return 'Disconnected - Tap to retry';
+    }
+  }
+
+  Widget _buildConnectionIcon() {
+    switch (_connectionState) {
+      case AppMqttConnectionState.connected:
+        return Icon(Icons.check_circle, color: _getConnectionColor(), size: 20);
+      case AppMqttConnectionState.connecting:
+        return SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(_getConnectionColor()),
+          ),
+        );
+      case AppMqttConnectionState.disconnected:
+        return Icon(Icons.error, color: _getConnectionColor(), size: 20);
     }
   }
 
@@ -90,18 +131,40 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Connection status
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _isConnected ? Colors.green.shade100 : Colors.red.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _isConnected ? '✓ Connected to MQTT' : '✗ Not Connected',
-                style: TextStyle(
-                  color: _isConnected ? Colors.green.shade900 : Colors.red.shade900,
-                  fontWeight: FontWeight.bold,
+            // Connection status with manual reconnect
+            GestureDetector(
+              onTap: _connectionState == AppMqttConnectionState.disconnected
+                  ? () => _mqttService.reconnect()
+                  : null,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _getConnectionColor().withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _getConnectionColor()),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildConnectionIcon(),
+                    const SizedBox(width: 8),
+                    Text(
+                      _getConnectionText(),
+                      style: TextStyle(
+                        color: _getConnectionColor(),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (_connectionState ==
+                        AppMqttConnectionState.disconnected) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.refresh,
+                        size: 18,
+                        color: _getConnectionColor(),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
