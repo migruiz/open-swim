@@ -22,16 +22,16 @@ def _prepare_device_directories(playlists_to_sync: List[PlaylistInfo]) -> None:
     existing_playlists_by_id = {playlist.id: playlist for playlist in state.playlists}
 
     # Remove any playlist folders that are no longer requested
-    for playlist in list(state.playlists):
-        if playlist.id in playlists_to_sync_by_id:
+    for existing_playlist in list(state.playlists):
+        if existing_playlist.id in playlists_to_sync_by_id:
             continue
-        playlist_path = os.path.join(sd_card_path, playlist.title)
+        playlist_path = os.path.join(sd_card_path, existing_playlist.title)
         if os.path.exists(playlist_path):
             shutil.rmtree(playlist_path)
             print(f"[Device Sync] Removed playlist folder no longer requested: {playlist_path}")
 
     updated_playlists: List[DevicePlaylistState] = []
-    for playlist in playlists_to_sync:
+    for playlist in playlists_to_sync:  # type: PlaylistInfo
         sanitized_title = sanitize_playlist_title(playlist.title)
         playlist_path = os.path.join(sd_card_path, sanitized_title)
 
