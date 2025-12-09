@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 
 /// Configuration for GitHub repository
-const String githubOwner = 'YOUR_GITHUB_USERNAME'; // TODO: Replace with your GitHub username
+const String githubOwner = 'migruiz'; // TODO: Replace with your GitHub username
 const String githubRepo = 'open-swim'; // TODO: Replace with your repo name if different
 
 class UpdateInfo {
