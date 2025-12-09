@@ -36,6 +36,20 @@ flutter build windows    # Windows
 - **Services**: `lib/services/` - Service classes for external integrations
   - `mqtt_service.dart` - MQTT client for device communication over WebSocket (wss://)
 
+### MQTT Service Pattern
+
+The `MqttService` uses a reactive pattern with `StreamController<String>.broadcast()` to expose incoming messages via a `messages` stream. Widgets subscribe to this stream to receive real-time updates:
+
+```dart
+_mqttService.messages.listen((message) {
+  // Handle incoming message
+});
+```
+
+**MQTT Configuration:**
+- Protocol: MQTT v3.1.1 over WebSocket (port 443)
+- QoS: `atLeastOnce` for subscriptions and publishing
+
 ## Key Dependencies
 
 - `mqtt_client` - MQTT protocol client for device communication
