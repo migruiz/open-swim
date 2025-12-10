@@ -12,7 +12,7 @@ Use this when you just want to use the plan file without the full conversation h
 ## Context
 
 - Feature name: `$ARGUMENTS`
-- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object { $_.Name }"`
+- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 -ExpandProperty Name"`
 - Current branch: !`git branch --show-current`
 
 ## Execute These Steps (No Pauses)
