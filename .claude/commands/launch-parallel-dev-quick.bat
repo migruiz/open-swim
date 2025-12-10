@@ -84,8 +84,8 @@ echo [7/7] Opening terminals...
 set "CLAUDE_PATH=%WORKTREES_DIR%\%FEATURE%-claude\%RELATIVE_PATH%"
 set "CODEX_PATH=%WORKTREES_DIR%\%FEATURE%-codex\%RELATIVE_PATH%"
 
-start "claude" powershell -NoExit -Command "$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; cd '%CLAUDE_PATH%'; claude"
-start "codex" powershell -NoExit -Command "$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; cd '%CODEX_PATH%'; codex"
+start "" /b cmd /c start "claude" powershell -NoExit -Command "$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; cd '%CLAUDE_PATH%'; claude"
+start "" /b cmd /c start "codex" powershell -NoExit -Command "$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; cd '%CODEX_PATH%'; codex"
 
 echo.
 echo === DONE ===
