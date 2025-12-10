@@ -1,19 +1,15 @@
 ---
 allowed-tools: Bash(powershell -Command:*)
 argument-hint: feature-name
-description: Quick parallel dev setup using .bat script (faster, no AI overhead)
+description: Launch parallel dev with Claude and Codex in separate worktrees
 ---
 
-# Launch Parallel Development (Quick) - BAT Version
+# Feature Parallel
 
-This command runs the `launch-parallel-dev-quick.bat` script directly, without AI involvement.
-
-## Usage
-
-Run the .bat script with the feature name:
+Launches parallel development with Claude Code and OpenAI Codex in separate git worktrees.
 
 ```bash
-powershell -Command "& '$(git rev-parse --show-toplevel)\.claude\commands\launch-parallel-dev-quick.bat' '$ARGUMENTS'"
+powershell -Command "& '$(git rev-parse --show-toplevel)\.claude\commands\feature-parallel.bat' '$ARGUMENTS'"
 ```
 
 The script will:
