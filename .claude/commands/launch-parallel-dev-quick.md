@@ -31,7 +31,7 @@ Detect the following and store them for use in subsequent steps:
 
 ### Step 3: Create feature base branch and plan directory
 ```bash
-git checkout -b features/[feature-name]-base
+git checkout -b features/[feature-name]/base
 mkdir -p plans/[feature-name]
 ```
 
@@ -64,7 +64,7 @@ Open two PowerShell terminals with custom window titles:
 
 Use this pattern (wrap Start-Process in powershell -Command):
 ```bash
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', 'host.UI.RawUI.WindowTitle = ''[feature-name]-claude''; cd ''[WORKTREES_DIR]/[feature-name]-claude/[RELATIVE_PATH]''; claude'"
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', '$$host.UI.RawUI.WindowTitle = ''[feature-name]-claude''; cd ''[WORKTREES_DIR]/[feature-name]-claude/[RELATIVE_PATH]''; claude'"
 ```
 
 ### Step 9: Print summary
@@ -72,7 +72,7 @@ powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command
 DONE! Parallel development launched (quick mode - no conversation export).
 
 Branches created:
-  - features/[feature-name]-base (base branch with plan)
+  - features/[feature-name]/base (base branch with plan)
   - features/[feature-name]/claude
   - features/[feature-name]/codex
 

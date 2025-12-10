@@ -46,7 +46,7 @@ Slash commands for running Claude Code and OpenAI Codex in parallel to implement
 ```
 
 This runs without pauses and:
-1. Creates branch `features/log-viewer-base`
+1. Creates branch `features/log-viewer/base`
 2. Copies plan from `~/.claude/plans/` to `plans/log-viewer/plan.md`
 3. Commits the plan
 4. Creates branches `features/log-viewer/claude` and `features/log-viewer/codex`
@@ -87,7 +87,7 @@ C:\repos\
 
 ## Git Branches Created
 
-- `features/{name}-base` - Base branch with plan committed
+- `features/{name}/base` - Base branch with plan committed
 - `features/{name}/claude` - Claude Code implementation branch
 - `features/{name}/codex` - Codex implementation branch
 
