@@ -44,14 +44,14 @@ git commit -m "Add implementation plan for [feature-name]"
 
 ### Step 6: Create worktree branches
 ```bash
-git branch features/[feature-name]/claude
-git branch features/[feature-name]/codex
+git branch features/[feature-name]-claude
+git branch features/[feature-name]-codex
 ```
 
 ### Step 7: Create worktrees
 ```bash
-git worktree add ../client-[feature-name]-claude features/[feature-name]/claude
-git worktree add ../client-[feature-name]-codex features/[feature-name]/codex
+git worktree add ../client-[feature-name]-claude features/[feature-name]-claude
+git worktree add ../client-[feature-name]-codex features/[feature-name]-codex
 ```
 
 ### Step 8: Launch terminals with auto-start AIs
@@ -67,8 +67,8 @@ DONE! Parallel development launched.
 
 Branches created:
   - features/[feature-name] (base)
-  - features/[feature-name]/claude
-  - features/[feature-name]/codex
+  - features/[feature-name]-claude
+  - features/[feature-name]-codex
 
 Worktrees:
   - ../client-[feature-name]-claude (Claude Code)

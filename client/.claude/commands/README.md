@@ -88,8 +88,8 @@ C:\repos\open-swim\
 ## Git Branches Created
 
 - `features/{name}` - Base branch with plan committed
-- `features/{name}/claude` - Claude Code implementation branch
-- `features/{name}/codex` - Codex implementation branch
+- `features/{name}-claude` - Claude Code implementation branch
+- `features/{name}-codex` - Codex implementation branch
 
 ## After Implementation
 
@@ -109,7 +109,7 @@ git add . && git commit -m "Implement {feature} (Codex)"
 
 ```bash
 # Diff between implementations
-git diff features/{name}/claude features/{name}/codex
+git diff features/{name}-claude features/{name}-codex
 
 # Or create PRs from each branch to compare in GitHub
 ```
