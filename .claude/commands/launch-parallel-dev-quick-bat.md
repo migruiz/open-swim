@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cmd /c:*)
+allowed-tools: Bash(powershell -Command:*)
 argument-hint: feature-name
 description: Quick parallel dev setup using .bat script (faster, no AI overhead)
 ---
@@ -13,7 +13,7 @@ This command runs the `launch-parallel-dev-quick.bat` script directly, without A
 Run the .bat script with the feature name:
 
 ```bash
-cmd /c "$(git rev-parse --show-toplevel)/.claude/commands/launch-parallel-dev-quick.bat" $ARGUMENTS
+powershell -Command "& '$(git rev-parse --show-toplevel)\.claude\commands\launch-parallel-dev-quick.bat' '$ARGUMENTS'"
 ```
 
 The script will:

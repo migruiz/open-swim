@@ -26,8 +26,8 @@ for %%i in ("%REPO_ROOT%") do set "REPO_NAME=%%~nxi"
 
 :: Get current directory and relative path from repo root
 set "CURRENT_DIR=%CD%"
-:: Use PowerShell to get relative path
-for /f "delims=" %%i in ('powershell -Command "[System.IO.Path]::GetRelativePath('%REPO_ROOT%', '%CURRENT_DIR%')"') do set "RELATIVE_PATH=%%i"
+:: Use PowerShell to get relative path (compatible with .NET Framework)
+for /f "delims=" %%i in ('powershell -Command "$root='%REPO_ROOT%'; $curr='%CURRENT_DIR%'; if ($curr -eq $root) { '.' } else { $curr.Replace($root + '\', '') }"') do set "RELATIVE_PATH=%%i"
 
 :: Set worktrees directory
 set "WORKTREES_DIR=%REPO_ROOT%\..\%REPO_NAME%-worktrees"
