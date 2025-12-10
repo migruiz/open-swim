@@ -65,7 +65,7 @@ if exist "%PLAN_FILE%" (
 
 :: Step 4: Commit
 echo [4/7] Committing plan...
-git add "plans\%FEATURE%\"
+git add plans\%FEATURE%\
 git commit -m "Add implementation plan for %FEATURE%"
 
 :: Step 5: Create worktree branches
