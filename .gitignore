@@ -16,3 +16,4 @@ api/src/open_swim/device/sync/podcast/__pycache__/
 api/src/open_swim/device/sync/youtube/__pycache__/
 api/src/open_swim/device/sync/__pycache__/
 api/src/open_swim/device/windows/__pycache__/
+/api/.claude/settings.local.json
