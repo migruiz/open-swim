@@ -46,12 +46,12 @@ Slash commands for running Claude Code and OpenAI Codex in parallel to implement
 ```
 
 This runs without pauses and:
-1. Creates branch `features/log-viewer`
+1. Creates branch `features/log-viewer-base`
 2. Copies plan from `~/.claude/plans/` to `plans/log-viewer/plan.md`
 3. Commits the plan
-4. Creates branches `features/log-viewer-claude` and `features/log-viewer-codex`
+4. Creates branches `features/log-viewer/claude` and `features/log-viewer/codex`
 5. Creates worktrees at `../[repo-name]-worktrees/log-viewer-claude` and `...-codex`
-6. Opens two PowerShell terminals in the same relative path
+6. Opens two PowerShell terminals (titled `log-viewer-claude` and `log-viewer-codex`)
 7. Runs `claude` and `codex` in each terminal
 
 ### Full Mode (With conversation history)
@@ -87,9 +87,9 @@ C:\repos\
 
 ## Git Branches Created
 
-- `features/{name}` - Base branch with plan committed
-- `features/{name}-claude` - Claude Code implementation branch
-- `features/{name}-codex` - Codex implementation branch
+- `features/{name}-base` - Base branch with plan committed
+- `features/{name}/claude` - Claude Code implementation branch
+- `features/{name}/codex` - Codex implementation branch
 
 ## After Implementation
 
@@ -109,7 +109,7 @@ git add . && git commit -m "Implement {feature} (Codex)"
 
 ```bash
 # Diff between implementations
-git diff features/{name}-claude features/{name}-codex
+git diff features/{name}/claude features/{name}/codex
 
 # Or create PRs from each branch to compare in GitHub
 ```

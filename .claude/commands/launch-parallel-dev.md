@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git checkout:*), Bash(git branch:*), Bash(mkdir:*), Bash(git add:*), Bash(git commit:*), Bash(cp:*), Bash(ls:*), Bash(powershell -Command:*), Bash(git worktree:*), Bash(Start-Process:*)
+allowed-tools: Bash(git checkout:*), Bash(git branch:*), Bash(mkdir:*), Bash(git add:*), Bash(git commit:*), Bash(cp:*), Bash(ls:*), Bash(powershell -Command:*), Bash(git worktree:*)
 argument-hint: feature-name
 description: Complete parallel dev setup - branch, plan, export, worktrees, auto-start AIs
 ---
@@ -28,9 +28,9 @@ Detect the following and store them for use in subsequent steps:
 - RELATIVE_PATH: current directory relative to git root (e.g., "client" or "api")
 - WORKTREES_DIR: ../[REPO_NAME]-worktrees
 
-### Step 3: Create feature branch and plan directory
+### Step 3: Create feature base branch and plan directory
 ```bash
-git checkout -b features/[feature-name]
+git checkout -b features/[feature-name]-base
 mkdir -p plans/[feature-name]
 ```
 
@@ -51,36 +51,42 @@ git commit -m "Add implementation plan for [feature-name]"
 
 ### Step 7: Create worktree branches
 ```bash
-git branch features/[feature-name]-claude
-git branch features/[feature-name]-codex
+git branch features/[feature-name]/claude
+git branch features/[feature-name]/codex
 ```
 
 ### Step 8: Create worktrees folder and worktrees
 ```bash
 mkdir -p ../[REPO_NAME]-worktrees
-git worktree add ../[REPO_NAME]-worktrees/[feature-name]-claude features/[feature-name]-claude
-git worktree add ../[REPO_NAME]-worktrees/[feature-name]-codex features/[feature-name]-codex
+git worktree add ../[REPO_NAME]-worktrees/[feature-name]-claude features/[feature-name]/claude
+git worktree add ../[REPO_NAME]-worktrees/[feature-name]-codex features/[feature-name]/codex
 ```
 
 ### Step 9: Launch terminals with AIs
-Open two PowerShell terminals:
-- Claude terminal: cd to ../[REPO_NAME]-worktrees/[feature-name]-claude/[RELATIVE_PATH] and run `claude`
-- Codex terminal: cd to ../[REPO_NAME]-worktrees/[feature-name]-codex/[RELATIVE_PATH] and run `codex`
+Open two PowerShell terminals with custom window titles:
+- Claude terminal: Title "[feature-name]-claude", cd to worktree/[RELATIVE_PATH], run `claude`
+- Codex terminal: Title "[feature-name]-codex", cd to worktree/[RELATIVE_PATH], run `codex`
+
+Use this pattern (wrap Start-Process in powershell -Command):
+```bash
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', 'host.UI.RawUI.WindowTitle = ''[feature-name]-claude''; cd ''[WORKTREES_DIR]/[feature-name]-claude/[RELATIVE_PATH]''; claude'"
+```
 
 ### Step 10: Print summary
 ```
 DONE! Parallel development launched.
 
 Branches created:
-  - features/[feature-name] (base)
-  - features/[feature-name]-claude
-  - features/[feature-name]-codex
+  - features/[feature-name]-base (base branch with plan)
+  - features/[feature-name]/claude
+  - features/[feature-name]/codex
 
 Worktrees:
   - ../[REPO_NAME]-worktrees/[feature-name]-claude
   - ../[REPO_NAME]-worktrees/[feature-name]-codex
 
 Terminals opened in: [RELATIVE_PATH]
+Terminal titles: [feature-name]-claude, [feature-name]-codex
 
 Both AIs are now ready for implementation.
 ```
