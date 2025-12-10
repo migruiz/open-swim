@@ -11,7 +11,7 @@ Single command to set up parallel Claude/Codex development with conversation exp
 ## Context
 
 - Feature name: `$ARGUMENTS`
-- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path $env:USERPROFILE\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object { $_.Name }"`
+- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object { $_.Name }"`
 - Current branch: !`git branch --show-current`
 
 ## Execute These Steps
@@ -27,7 +27,7 @@ mkdir -p plans/[feature-name]
 
 ### Step 3: Copy plan file
 ```powershell
-powershell -Command "Copy-Item -Path (Get-ChildItem -Path $env:USERPROFILE\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Destination 'plans/[feature-name]/plan.md'"
+powershell -Command "Copy-Item -Path (Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Destination 'plans/[feature-name]/plan.md'"
 ```
 
 ### Step 4: PAUSE - Ask user to export conversation

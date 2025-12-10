@@ -12,7 +12,7 @@ Use this when you just want to use the plan file without the full conversation h
 ## Context
 
 - Feature name: `$ARGUMENTS`
-- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path $env:USERPROFILE\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object { $_.Name }"`
+- Recent plans in ~/.claude/plans/: !`powershell -Command "Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object { $_.Name }"`
 - Current branch: !`git branch --show-current`
 
 ## Execute These Steps (No Pauses)
@@ -28,7 +28,7 @@ mkdir -p plans/[feature-name]
 
 ### Step 3: Copy plan file
 ```powershell
-powershell -Command "Copy-Item -Path (Get-ChildItem -Path $env:USERPROFILE\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Destination 'plans/[feature-name]/plan.md'"
+powershell -Command "Copy-Item -Path (Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Destination 'plans/[feature-name]/plan.md'"
 ```
 
 ### Step 4: Commit immediately (no export)
