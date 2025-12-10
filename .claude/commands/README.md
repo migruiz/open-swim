@@ -41,7 +41,7 @@ Slash commands for running Claude Code and OpenAI Codex in parallel to implement
 ### Quick Mode (Recommended for testing)
 
 ```bash
-# After planning a feature in Claude Code plan mode:
+# From any subfolder (client/, api/, etc.):
 /launch-parallel-dev-quick log-viewer
 ```
 
@@ -49,10 +49,10 @@ This runs without pauses and:
 1. Creates branch `features/log-viewer`
 2. Copies plan from `~/.claude/plans/` to `plans/log-viewer/plan.md`
 3. Commits the plan
-4. Creates branches `features/log-viewer/claude` and `features/log-viewer/codex`
-5. Creates worktrees at `../client-log-viewer-claude` and `../client-log-viewer-codex`
-6. Opens two PowerShell terminals
-7. Auto-starts Claude Code and Codex with the plan context
+4. Creates branches `features/log-viewer-claude` and `features/log-viewer-codex`
+5. Creates worktrees at `../[repo-name]-worktrees/log-viewer-claude` and `...-codex`
+6. Opens two PowerShell terminals in the same relative path
+7. Runs `claude` and `codex` in each terminal
 
 ### Full Mode (With conversation history)
 
@@ -65,24 +65,24 @@ Same as quick mode, but pauses to let you run:
 /export plans/log-viewer/conversation.md
 ```
 
-This saves the full planning conversation for richer context.
-
 ## Directory Structure After Running
 
 ```
-C:\repos\open-swim\
-├── client\                           # Main repo (you are here)
-│   ├── .claude\commands\             # These slash commands
-│   └── plans\
-│       └── log-viewer\
-│           ├── plan.md               # Implementation plan
-│           └── conversation.md       # Planning conversation (full mode only)
+C:\repos\
+├── open-swim\                              # Main repo
+│   ├── .claude\commands\                   # These slash commands
+│   ├── client\
+│   │   └── plans\log-viewer\               # when run from client/
+│   └── api\
+│       └── plans\log-viewer\               # when run from api/
 │
-├── client-log-viewer-claude\         # Claude Code worktree
-│   └── (full repo on features/log-viewer/claude branch)
-│
-└── client-log-viewer-codex\          # Codex worktree
-    └── (full repo on features/log-viewer/codex branch)
+└── open-swim-worktrees\                    # Worktrees folder
+    ├── log-viewer-claude\
+    │   ├── client\                         # Terminal opens here if run from client/
+    │   └── api\
+    └── log-viewer-codex\
+        ├── client\
+        └── api\
 ```
 
 ## Git Branches Created
@@ -118,6 +118,6 @@ git diff features/{name}-claude features/{name}-codex
 
 When done with parallel development:
 ```bash
-git worktree remove ../client-{name}-claude
-git worktree remove ../client-{name}-codex
+git worktree remove ../[repo-name]-worktrees/{name}-claude
+git worktree remove ../[repo-name]-worktrees/{name}-codex
 ```
