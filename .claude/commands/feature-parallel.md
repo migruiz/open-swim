@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash(powershell -Command:*)
-argument-hint: feature-name
-description: Launch parallel dev with Claude and Codex (requires /plan-feature first)
+argument-hint: plan-file-path (optional)
+description: Launch parallel dev with Claude and Codex (uses plan file from /plan-feature)
 ---
 
 # Feature Parallel
@@ -12,17 +12,22 @@ Launches parallel development with Claude Code and OpenAI Codex in separate git 
 powershell -Command "& ((git rev-parse --show-toplevel) + '\.claude\commands\feature-parallel.bat') '$ARGUMENTS'"
 ```
 
-**Prerequisites:** Run `/plan-feature [feature]` first to create brief.md and plan.md
+**Prerequisites:** Run `/plan-feature` first to create a plan with FEATURE_NAME, BRIEF, and PLAN sections.
+
+**Arguments:**
+- With path: Uses the specified plan file (e.g., `/feature-parallel C:\Users\...\.claude\plans\my-plan.md`)
+- Without argument: Auto-detects the most recently modified `.md` file in `~/.claude/plans/`
 
 The script will:
-1. Validate plan folder exists at `~/.claude/plans/[feature]/` with brief.md and plan.md
-2. Create branch `features/[feature]/base`
-3. Create `plans/[feature]/` directory
-4. Copy brief.md and plan.md from plan folder
-5. Commit the plan files
-6. Create branches `features/[feature]/claude` and `features/[feature]/codex`
-7. Create worktrees in `../[repo-name]-worktrees/`
-8. Open PowerShell terminals with initial prompts that:
+1. Parse the plan file to extract FEATURE_NAME, BRIEF, and PLAN sections
+2. Validate all required markers exist (`<!-- FEATURE_NAME: -->`, `<!-- BEGIN_BRIEF -->`, etc.)
+3. Create branch `features/[feature]/base`
+4. Create `plans/[feature]/` directory in the repo
+5. Extract and write brief.md and plan.md from the parsed sections
+6. Commit the plan files
+7. Create branches `features/[feature]/claude` and `features/[feature]/codex`
+8. Create worktrees in `../[repo-name]-worktrees/`
+9. Open PowerShell terminals with initial prompts that:
    - Reference @plans/[feature]/brief.md and @plans/[feature]/plan.md
    - Instruct implementers to VALIDATE the plan before coding
    - Wait for confirmation before implementation

@@ -1,15 +1,66 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Launch Parallel Development (Quick) - .bat version
-:: Usage: launch-parallel-dev-quick.bat feature-name
+:: Launch Parallel Development - .bat version
+:: Usage: feature-parallel.bat [plan-file-path]
+:: If no argument, auto-detects latest .md file in ~/.claude/plans/
 
-:: Validate argument
+:: Handle argument - plan file path or auto-detect
 if "%~1"=="" (
-    echo Usage: launch-parallel-dev-quick.bat feature-name
+    :: No argument - find latest .md file in plans folder
+    echo No plan file specified, auto-detecting latest plan...
+    for /f "delims=" %%i in ('powershell -Command "Get-ChildItem '%USERPROFILE%\.claude\plans\*.md' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName"') do set "PLAN_FILE=%%i"
+    if "!PLAN_FILE!"=="" (
+        echo Error: No plan files found in %USERPROFILE%\.claude\plans\
+        echo Run /plan-feature first to create a plan.
+        exit /b 1
+    )
+    echo Auto-detected: !PLAN_FILE!
+) else (
+    set "PLAN_FILE=%~1"
+)
+
+:: Validate plan file exists
+if not exist "%PLAN_FILE%" (
+    echo Error: Plan file not found: %PLAN_FILE%
     exit /b 1
 )
-set FEATURE=%~1
+
+:: Parse plan file using PowerShell - extract FEATURE_NAME
+echo Parsing plan file...
+for /f "delims=" %%i in ('powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; $m = [regex]::Match($c, '<!-- FEATURE_NAME: (.+?) -->'); if ($m.Success) { $m.Groups[1].Value.Trim() } else { '' }"') do set "FEATURE=%%i"
+
+if "%FEATURE%"=="" (
+    echo Error: Could not extract FEATURE_NAME from plan file
+    echo Make sure the plan file contains: ^<^!-- FEATURE_NAME: your-feature-name --^>
+    exit /b 1
+)
+
+:: Validate BRIEF section exists
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; if ($c -notmatch '<!-- BEGIN_BRIEF -->') { exit 1 }"
+if errorlevel 1 (
+    echo Error: BEGIN_BRIEF marker not found in plan file
+    exit /b 1
+)
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; if ($c -notmatch '<!-- END_BRIEF -->') { exit 1 }"
+if errorlevel 1 (
+    echo Error: END_BRIEF marker not found in plan file
+    exit /b 1
+)
+
+:: Validate PLAN section exists
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; if ($c -notmatch '<!-- BEGIN_PLAN -->') { exit 1 }"
+if errorlevel 1 (
+    echo Error: BEGIN_PLAN marker not found in plan file
+    exit /b 1
+)
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; if ($c -notmatch '<!-- END_PLAN -->') { exit 1 }"
+if errorlevel 1 (
+    echo Error: END_PLAN marker not found in plan file
+    exit /b 1
+)
+
+echo Found feature: %FEATURE%
 
 :: Get git root and repo name
 for /f "delims=" %%i in ('git rev-parse --show-toplevel 2^>nul') do set "REPO_ROOT=%%i"
@@ -32,30 +83,12 @@ for /f "delims=" %%i in ('powershell -Command "$root='%REPO_ROOT%'; $curr='%CURR
 :: Set worktrees directory
 set "WORKTREES_DIR=%REPO_ROOT%\..\%REPO_NAME%-worktrees"
 
-:: Get plan folder for this feature from ~/.claude/plans/[feature]/
-set "PLAN_FOLDER=%USERPROFILE%\.claude\plans\%FEATURE%"
-
-:: Validate plan folder exists with required files
-if not exist "%PLAN_FOLDER%" (
-    echo Error: Plan folder not found: %PLAN_FOLDER%
-    echo Run /plan-feature %FEATURE% first to create the plan.
-    exit /b 1
-)
-if not exist "%PLAN_FOLDER%\brief.md" (
-    echo Error: brief.md not found in %PLAN_FOLDER%
-    exit /b 1
-)
-if not exist "%PLAN_FOLDER%\plan.md" (
-    echo Error: plan.md not found in %PLAN_FOLDER%
-    exit /b 1
-)
-
 echo.
-echo === Launch Parallel Development (Quick) ===
+echo === Launch Parallel Development ===
 echo Feature: %FEATURE%
 echo Repo: %REPO_NAME%
 echo Relative path: %RELATIVE_PATH%
-echo Plan folder: %PLAN_FOLDER%
+echo Plan file: %PLAN_FILE%
 echo.
 
 :: Step 1: Create feature base branch
@@ -70,12 +103,21 @@ if errorlevel 1 (
 echo [2/7] Creating plans/%FEATURE%/ directory...
 mkdir "plans\%FEATURE%" 2>nul
 
-:: Step 3: Copy plan files (brief + plan)
-echo [3/7] Copying plan files...
-copy "%PLAN_FOLDER%\brief.md" "plans\%FEATURE%\brief.md" >nul
-copy "%PLAN_FOLDER%\plan.md" "plans\%FEATURE%\plan.md" >nul
-echo   - Copied brief.md
-echo   - Copied plan.md
+:: Step 3: Extract and write plan files from parsed content
+echo [3/7] Extracting plan files...
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; $brief = [regex]::Match($c, '(?s)<!-- BEGIN_BRIEF -->(.+?)<!-- END_BRIEF -->').Groups[1].Value.Trim(); Set-Content -Path 'plans\%FEATURE%\brief.md' -Value $brief -Encoding UTF8 -NoNewline"
+if errorlevel 1 (
+    echo Error: Failed to extract brief.md
+    exit /b 1
+)
+echo   - Created brief.md
+
+powershell -Command "$c = Get-Content '%PLAN_FILE%' -Raw; $plan = [regex]::Match($c, '(?s)<!-- BEGIN_PLAN -->(.+?)<!-- END_PLAN -->').Groups[1].Value.Trim(); Set-Content -Path 'plans\%FEATURE%\plan.md' -Value $plan -Encoding UTF8 -NoNewline"
+if errorlevel 1 (
+    echo Error: Failed to extract plan.md
+    exit /b 1
+)
+echo   - Created plan.md
 
 :: Step 4: Commit
 echo [4/7] Committing plan...

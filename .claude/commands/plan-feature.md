@@ -81,14 +81,16 @@ Which name would you like to use, or would you prefer a different name?
 
 Wait for the user to confirm their choice. Store this as the FEATURE_NAME for the next phases.
 
-### Phase 7: Output Files
+### Phase 7: Write Plan to Current File
 
-Create a folder and write two files using the FEATURE_NAME confirmed in Phase 6:
+Write the plan to the **current plan file** (the designated plan mode file) using HTML comment markers for section extraction. The `/feature-parallel` command will parse these markers to extract the brief and plan sections.
 
-**Folder:** `~/.claude/plans/[FEATURE_NAME]/`
+**Use this exact structure:**
 
-**File 1: brief.md** - Context and rationale for implementers
 ```markdown
+<!-- FEATURE_NAME: [FEATURE_NAME] -->
+
+<!-- BEGIN_BRIEF -->
 # Feature Brief: [FEATURE_NAME]
 
 ## Problem Statement
@@ -120,10 +122,9 @@ Create a folder and write two files using the FEATURE_NAME confirmed in Phase 6:
 ## Open Questions / Risks
 - [Any unresolved issues the implementer should be aware of]
 - [Potential risks or edge cases to watch for]
-```
+<!-- END_BRIEF -->
 
-**File 2: plan.md** - Step-by-step implementation guide
-```markdown
+<!-- BEGIN_PLAN -->
 # Implementation Plan: [FEATURE_NAME]
 
 ## Overview
@@ -155,7 +156,13 @@ Create a folder and write two files using the FEATURE_NAME confirmed in Phase 6:
 - [Any tips, gotchas, or important context]
 - [Dependencies between steps]
 - [Things to watch out for]
+<!-- END_PLAN -->
 ```
+
+**Critical markers:**
+- `<!-- FEATURE_NAME: [name] -->` - Must be at the very top
+- `<!-- BEGIN_BRIEF -->` and `<!-- END_BRIEF -->` - Wrap the brief section
+- `<!-- BEGIN_PLAN -->` and `<!-- END_PLAN -->` - Wrap the plan section
 
 ## Important Reminders
 
@@ -165,18 +172,18 @@ Create a folder and write two files using the FEATURE_NAME confirmed in Phase 6:
 4. **Ask questions** - Don't guess at requirements, clarify with the user
 5. **Validate** - Ensure the plan is actually implementable with the current codebase
 
-When you've gathered enough information and created both files, proceed to Phase 8.
+When you've written the plan with all markers, proceed to Phase 8.
 
 ### Phase 8: Launch Parallel Development
 
-After the plan files are written, ask the user:
+After the plan is written, ask the user:
 
-"The plan is complete. Both `brief.md` and `plan.md` have been created at `~/.claude/plans/[FEATURE_NAME]/`.
+"The plan is complete and saved to [PLAN_FILE_PATH].
 
 Ready to launch parallel development?"
 
+(Replace [PLAN_FILE_PATH] with the actual path to the current plan file, e.g., `C:\Users\miguelpc\.claude\plans\sprightly-herding-charm.md`)
+
 If the user confirms YES:
 1. Exit plan mode (if in plan mode)
-2. Execute `/feature-parallel [FEATURE_NAME]`
-
-(Replace [FEATURE_NAME] with the actual feature name confirmed in Phase 6)
+2. Execute `/feature-parallel [PLAN_FILE_PATH]`
