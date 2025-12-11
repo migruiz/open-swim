@@ -32,15 +32,30 @@ for /f "delims=" %%i in ('powershell -Command "$root='%REPO_ROOT%'; $curr='%CURR
 :: Set worktrees directory
 set "WORKTREES_DIR=%REPO_ROOT%\..\%REPO_NAME%-worktrees"
 
-:: Get most recent plan file from ~/.claude/plans/
-for /f "delims=" %%i in ('powershell -Command "Get-ChildItem -Path ~\.claude\plans -Filter *.md | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName"') do set "PLAN_FILE=%%i"
+:: Get plan folder for this feature from ~/.claude/plans/[feature]/
+set "PLAN_FOLDER=%USERPROFILE%\.claude\plans\%FEATURE%"
+
+:: Validate plan folder exists with required files
+if not exist "%PLAN_FOLDER%" (
+    echo Error: Plan folder not found: %PLAN_FOLDER%
+    echo Run /plan-feature %FEATURE% first to create the plan.
+    exit /b 1
+)
+if not exist "%PLAN_FOLDER%\brief.md" (
+    echo Error: brief.md not found in %PLAN_FOLDER%
+    exit /b 1
+)
+if not exist "%PLAN_FOLDER%\plan.md" (
+    echo Error: plan.md not found in %PLAN_FOLDER%
+    exit /b 1
+)
 
 echo.
 echo === Launch Parallel Development (Quick) ===
 echo Feature: %FEATURE%
 echo Repo: %REPO_NAME%
 echo Relative path: %RELATIVE_PATH%
-echo Plan file: %PLAN_FILE%
+echo Plan folder: %PLAN_FOLDER%
 echo.
 
 :: Step 1: Create feature base branch
@@ -55,13 +70,12 @@ if errorlevel 1 (
 echo [2/7] Creating plans/%FEATURE%/ directory...
 mkdir "plans\%FEATURE%" 2>nul
 
-:: Step 3: Copy plan file
-echo [3/7] Copying plan file...
-if exist "%PLAN_FILE%" (
-    copy "%PLAN_FILE%" "plans\%FEATURE%\plan.md" >nul
-) else (
-    echo Warning: No plan file found in ~/.claude/plans/
-)
+:: Step 3: Copy plan files (brief + plan)
+echo [3/7] Copying plan files...
+copy "%PLAN_FOLDER%\brief.md" "plans\%FEATURE%\brief.md" >nul
+copy "%PLAN_FOLDER%\plan.md" "plans\%FEATURE%\plan.md" >nul
+echo   - Copied brief.md
+echo   - Copied plan.md
 
 :: Step 4: Commit
 echo [4/7] Committing plan...
@@ -79,13 +93,18 @@ if not exist "%WORKTREES_DIR%" mkdir "%WORKTREES_DIR%"
 git worktree add "%WORKTREES_DIR%\%FEATURE%-claude" "features/%FEATURE%/claude"
 git worktree add "%WORKTREES_DIR%\%FEATURE%-codex" "features/%FEATURE%/codex"
 
-:: Step 7: Open terminals
-echo [7/7] Opening terminals...
+:: Step 7: Open terminals with initial prompts
+echo [7/7] Opening terminals with initial prompts...
 set "CLAUDE_PATH=%WORKTREES_DIR%\%FEATURE%-claude\%RELATIVE_PATH%"
 set "CODEX_PATH=%WORKTREES_DIR%\%FEATURE%-codex\%RELATIVE_PATH%"
 
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude\""
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex\""
+:: Build initial prompts for Claude and Codex
+set "CLAUDE_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev setup. Read @plans/%FEATURE%/brief.md for context, requirements and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. CRITICAL: Before writing ANY code, you MUST validate the plan: (1) Read both files completely (2) Verify all files referenced in the plan exist (3) Check the approach aligns with existing code patterns (4) Identify any issues, missing deps, or unclear requirements (5) Report validation findings and WAIT for confirmation. Do NOT implement until validation passes. If you find problems, explain them clearly. After validation approval, follow plan.md steps precisely."
+
+set "CODEX_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev setup. Read @plans/%FEATURE%/brief.md for context and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. BEFORE CODING: Validate the plan first - (1) Read both files (2) Check referenced files exist (3) Verify approach matches codebase patterns (4) Report any issues found (5) Wait for confirmation before implementing. Only proceed after validation passes. Follow plan.md steps precisely."
+
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude '%CLAUDE_PROMPT%'\""
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex '%CODEX_PROMPT%'\""
 
 echo.
 echo === DONE ===
