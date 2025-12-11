@@ -178,12 +178,10 @@ When you've written the plan with all markers, proceed to Phase 8.
 
 After the plan is written, ask the user:
 
-"The plan is complete and saved to [PLAN_FILE_PATH].
-
-Ready to launch parallel development?"
-
-(Replace [PLAN_FILE_PATH] with the actual path to the current plan file, e.g., `C:\Users\miguelpc\.claude\plans\sprightly-herding-charm.md`)
+"The plan is complete. Ready to launch parallel development?"
 
 If the user confirms YES:
 1. Exit plan mode (if in plan mode)
-2. Execute `/feature-parallel [PLAN_FILE_PATH]`
+2. Execute `/feature-parallel`
+
+(The command auto-detects the most recent plan file.)
