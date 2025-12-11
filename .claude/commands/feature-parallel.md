@@ -9,7 +9,7 @@ description: Launch parallel dev with Claude and Codex (requires /plan-feature f
 Launches parallel development with Claude Code and OpenAI Codex in separate git worktrees.
 
 ```bash
-powershell -Command "& '$(git rev-parse --show-toplevel)\.claude\commands\feature-parallel.bat' '$ARGUMENTS'"
+powershell -Command "& ((git rev-parse --show-toplevel) + '\.claude\commands\feature-parallel.bat') '$ARGUMENTS'"
 ```
 
 **Prerequisites:** Run `/plan-feature [feature]` first to create brief.md and plan.md

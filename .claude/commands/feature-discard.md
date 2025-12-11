@@ -9,7 +9,7 @@ description: Cleanup feature branches and worktrees created by feature-parallel
 Removes branches and worktrees for a feature created by `/feature-parallel`.
 
 ```bash
-powershell -Command "& '$(git rev-parse --show-toplevel)\.claude\commands\feature-discard.bat' '$ARGUMENTS'"
+powershell -Command "& ((git rev-parse --show-toplevel) + '\.claude\commands\feature-discard.bat') '$ARGUMENTS'"
 ```
 
 The script will:
