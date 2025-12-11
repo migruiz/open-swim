@@ -39,12 +39,12 @@ if ($currentBranch -in $featureBranches) {
     Write-Host "Switching away from feature branch..."
     $switched = $false
 
-    # Try main first, then master
-    git checkout main 2>$null
+    # Try main first, then master (suppress all output including stderr)
+    $null = git checkout main 2>&1
     if ($LASTEXITCODE -eq 0) {
         $switched = $true
     } else {
-        git checkout master 2>$null
+        $null = git checkout master 2>&1
         if ($LASTEXITCODE -eq 0) {
             $switched = $true
         }
