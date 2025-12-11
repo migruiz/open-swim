@@ -176,12 +176,20 @@ When you've written the plan with all markers, proceed to Phase 8.
 
 ### Phase 8: Launch Parallel Development
 
-After the plan is written, ask the user:
+**⚠️ CRITICAL: DO NOT IMPLEMENT THE PLAN YOURSELF ⚠️**
 
-"The plan is complete. Ready to launch parallel development?"
+Your job is ONLY to create the plan. You must NEVER implement the plan directly.
+
+After the plan is written to the file with all markers, you MUST:
+
+1. **STOP** - Do not proceed with any implementation
+2. **ASK** - Ask the user: "The plan is complete and saved. Ready to launch parallel development with `/feature-parallel`?"
+3. **WAIT** - Wait for the user's response
 
 If the user confirms YES:
-1. Exit plan mode (if in plan mode)
-2. Execute `/feature-parallel`
+- Use the SlashCommand tool to execute `/feature-parallel`
 
-(The command auto-detects the most recent plan file.)
+If the user says NO:
+- End the conversation. The plan file is saved and they can run `/feature-parallel` later.
+
+**REMEMBER: Your role is planning, not implementing. The implementation will be done by `/feature-parallel` which spawns separate agents.**

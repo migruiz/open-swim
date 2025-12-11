@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(powershell -Command:*)
+allowed-tools: Bash(powershell -ExecutionPolicy Bypass -File:*)
 argument-hint: feature-name
 description: Cleanup feature branches and worktrees created by feature-parallel
 ---
@@ -9,7 +9,7 @@ description: Cleanup feature branches and worktrees created by feature-parallel
 Removes branches and worktrees for a feature created by `/feature-parallel`.
 
 ```bash
-powershell -Command "& ((git rev-parse --show-toplevel) + '\.claude\commands\feature-discard.bat') '$ARGUMENTS'"
+powershell -ExecutionPolicy Bypass -File "$(git rev-parse --show-toplevel)\.claude\commands\feature-discard.ps1" "$ARGUMENTS"
 ```
 
 The script will:
