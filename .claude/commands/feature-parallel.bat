@@ -99,9 +99,9 @@ set "CLAUDE_PATH=%WORKTREES_DIR%\%FEATURE%-claude\%RELATIVE_PATH%"
 set "CODEX_PATH=%WORKTREES_DIR%\%FEATURE%-codex\%RELATIVE_PATH%"
 
 :: Build initial prompts for Claude and Codex
-set "CLAUDE_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev setup. Read @plans/%FEATURE%/brief.md for context, requirements and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. CRITICAL: Before writing ANY code, you MUST validate the plan: (1) Read both files completely (2) Verify all files referenced in the plan exist (3) Check the approach aligns with existing code patterns (4) Identify any issues, missing deps, or unclear requirements (5) Report validation findings and WAIT for confirmation. Do NOT implement until validation passes. If you find problems, explain them clearly. After validation approval, follow plan.md steps precisely."
+set "CLAUDE_PROMPT=You are implementing feature '%FEATURE%'. Read @plans/%FEATURE%/brief.md for context, requirements and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. CRITICAL: Before writing ANY code, you MUST validate the plan: (1) Read both files completely (2) Verify all files referenced in the plan exist (3) Check the approach aligns with existing code patterns (4) Identify any issues, missing deps, or unclear requirements (5) Report validation findings and WAIT for confirmation. Do NOT implement until validation passes. If you find problems, explain them clearly. After validation approval, follow plan.md steps precisely. When implementation is complete, commit all your changes with a descriptive commit message."
 
-set "CODEX_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev setup. Read @plans/%FEATURE%/brief.md for context and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. BEFORE CODING: Validate the plan first - (1) Read both files (2) Check referenced files exist (3) Verify approach matches codebase patterns (4) Report any issues found (5) Wait for confirmation before implementing. Only proceed after validation passes. Follow plan.md steps precisely."
+set "CODEX_PROMPT=You are implementing feature '%FEATURE%'. Read @plans/%FEATURE%/brief.md for context and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. BEFORE CODING: Validate the plan first - (1) Read both files (2) Check referenced files exist (3) Verify approach matches codebase patterns (4) Report any issues found (5) Wait for confirmation before implementing. Only proceed after validation passes. Follow plan.md steps precisely. When implementation is complete, commit all your changes with a descriptive commit message."
 
 :: Write prompts to temp files to avoid escaping issues
 set "CLAUDE_PROMPT_FILE=%TEMP%\claude_prompt_%FEATURE%.txt"
@@ -111,8 +111,8 @@ echo %CLAUDE_PROMPT%> "%CLAUDE_PROMPT_FILE%"
 echo %CODEX_PROMPT%> "%CODEX_PROMPT_FILE%"
 
 :: Launch terminals - read prompt from file using Get-Content
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude (Get-Content '%CLAUDE_PROMPT_FILE%' -Raw)\""
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex (Get-Content '%CODEX_PROMPT_FILE%' -Raw)\""
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude --dangerously-skip-permissions (Get-Content '%CLAUDE_PROMPT_FILE%' -Raw)\""
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex --ask-for-approval never (Get-Content '%CODEX_PROMPT_FILE%' -Raw)\""
 
 echo.
 echo === DONE ===

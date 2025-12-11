@@ -1,14 +1,23 @@
 ---
 allowed-tools: Write, Read, Glob, Grep, Task, AskUserQuestion
-argument-hint: feature-name
+argument-hint: feature description or leave empty
 description: Create a structured feature plan with brief and implementation steps (use Shift+Tab to enter plan mode first)
 ---
 
-# Plan Feature: $ARGUMENTS
+# Feature Planning
 
 > **Note:** This command works best in plan mode. Press Shift+Tab before running to enter plan mode.
 
-You are a senior software architect helping plan a feature implementation. Your goal is to create two comprehensive documents that will guide AI implementers (Claude Code and Codex) working in parallel.
+You are a senior software architect helping plan a feature implementation. Your goal is to create two comprehensive documents that will guide AI implementers.
+
+## Getting Started
+
+**User's initial input:** $ARGUMENTS
+
+If the input above is empty or just whitespace, start by asking:
+"What feature would you like to plan? Please describe what you want to build, the problem you're solving, or the functionality you need."
+
+If there is input, treat it as the initial feature description and proceed to Phase 1.
 
 ## Your Process
 
@@ -48,15 +57,39 @@ Write detailed implementation steps with:
 - Clear order of operations
 - Verification steps
 
-### Phase 6: Output Files
+### Phase 6: Generate Feature Name
 
-Create a folder and write two files:
+Before creating the output files, generate a git-compatible feature name:
 
-**Folder:** `~/.claude/plans/$ARGUMENTS/`
+1. Based on the planning work done, propose **2-3 feature name options**
+2. Names must be:
+   - Lowercase
+   - Use hyphens (no spaces or special characters)
+   - Concise but descriptive (2-4 words typically)
+   - Valid for git branch names
+
+Example format:
+```
+Based on our planning, here are some feature name options:
+
+1. `dark-mode-toggle` - focuses on the toggle functionality
+2. `theme-switcher` - broader name covering theming
+3. `ui-dark-mode` - emphasizes the UI aspect
+
+Which name would you like to use, or would you prefer a different name?
+```
+
+Wait for the user to confirm their choice. Store this as the FEATURE_NAME for the next phases.
+
+### Phase 7: Output Files
+
+Create a folder and write two files using the FEATURE_NAME confirmed in Phase 6:
+
+**Folder:** `~/.claude/plans/[FEATURE_NAME]/`
 
 **File 1: brief.md** - Context and rationale for implementers
 ```markdown
-# Feature Brief: $ARGUMENTS
+# Feature Brief: [FEATURE_NAME]
 
 ## Problem Statement
 [What problem are we solving and why is it important?]
@@ -91,7 +124,7 @@ Create a folder and write two files:
 
 **File 2: plan.md** - Step-by-step implementation guide
 ```markdown
-# Implementation Plan: $ARGUMENTS
+# Implementation Plan: [FEATURE_NAME]
 
 ## Overview
 [One-paragraph summary of what will be implemented]
@@ -132,16 +165,18 @@ Create a folder and write two files:
 4. **Ask questions** - Don't guess at requirements, clarify with the user
 5. **Validate** - Ensure the plan is actually implementable with the current codebase
 
-When you've gathered enough information and created both files, proceed to Phase 7.
+When you've gathered enough information and created both files, proceed to Phase 8.
 
-### Phase 7: Launch Parallel Development
+### Phase 8: Launch Parallel Development
 
 After the plan files are written, ask the user:
 
-"The plan is complete. Both `brief.md` and `plan.md` have been created at `~/.claude/plans/$ARGUMENTS/`.
+"The plan is complete. Both `brief.md` and `plan.md` have been created at `~/.claude/plans/[FEATURE_NAME]/`.
 
-Ready to launch parallel development with Claude and Codex?"
+Ready to launch parallel development?"
 
 If the user confirms YES:
 1. Exit plan mode (if in plan mode)
-2. Execute `/feature-parallel $ARGUMENTS`
+2. Execute `/feature-parallel [FEATURE_NAME]`
+
+(Replace [FEATURE_NAME] with the actual feature name confirmed in Phase 6)
