@@ -82,7 +82,9 @@ def sync_podcast_episodes_to_device() -> None:
                 shutil.copy2(mp3_file, destination_path)
                 print(f"[Podcast Sync] Copied: {filename}")
             except Exception as e:
-                print(f"[Podcast Sync] Error copying {filename}: {e}")
+                raise RuntimeError(
+                    f"[Podcast Sync] Failed to copy '{filename}' for episode '{episode.id}': {e}"
+                ) from e
 
     state.podcasts.synced_episode_ids = list(episodes_to_sync_ids)
     save_sync_state(state, device_sdcard_path)
