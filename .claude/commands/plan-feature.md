@@ -1,10 +1,12 @@
 ---
 allowed-tools: Write, Read, Glob, Grep, Task, AskUserQuestion
 argument-hint: feature-name
-description: Create a structured feature plan with brief and implementation steps
+description: Create a structured feature plan with brief and implementation steps (use Shift+Tab to enter plan mode first)
 ---
 
 # Plan Feature: $ARGUMENTS
+
+> **Note:** This command works best in plan mode. Press Shift+Tab before running to enter plan mode.
 
 You are a senior software architect helping plan a feature implementation. Your goal is to create two comprehensive documents that will guide AI implementers (Claude Code and Codex) working in parallel.
 
@@ -130,4 +132,16 @@ Create a folder and write two files:
 4. **Ask questions** - Don't guess at requirements, clarify with the user
 5. **Validate** - Ensure the plan is actually implementable with the current codebase
 
-When you've gathered enough information and created both files, confirm with the user that the plan is complete and ready for `/feature-parallel $ARGUMENTS`.
+When you've gathered enough information and created both files, proceed to Phase 7.
+
+### Phase 7: Launch Parallel Development
+
+After the plan files are written, ask the user:
+
+"The plan is complete. Both `brief.md` and `plan.md` have been created at `~/.claude/plans/$ARGUMENTS/`.
+
+Ready to launch parallel development with Claude and Codex?"
+
+If the user confirms YES:
+1. Exit plan mode (if in plan mode)
+2. Execute `/feature-parallel $ARGUMENTS`

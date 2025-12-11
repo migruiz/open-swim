@@ -103,8 +103,16 @@ set "CLAUDE_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev se
 
 set "CODEX_PROMPT=You are implementing feature '%FEATURE%' in a parallel dev setup. Read @plans/%FEATURE%/brief.md for context and rationale. Read @plans/%FEATURE%/plan.md for implementation steps. BEFORE CODING: Validate the plan first - (1) Read both files (2) Check referenced files exist (3) Verify approach matches codebase patterns (4) Report any issues found (5) Wait for confirmation before implementing. Only proceed after validation passes. Follow plan.md steps precisely."
 
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude '%CLAUDE_PROMPT%'\""
-powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex '%CODEX_PROMPT%'\""
+:: Write prompts to temp files to avoid escaping issues
+set "CLAUDE_PROMPT_FILE=%TEMP%\claude_prompt_%FEATURE%.txt"
+set "CODEX_PROMPT_FILE=%TEMP%\codex_prompt_%FEATURE%.txt"
+
+echo %CLAUDE_PROMPT%> "%CLAUDE_PROMPT_FILE%"
+echo %CODEX_PROMPT%> "%CODEX_PROMPT_FILE%"
+
+:: Launch terminals - read prompt from file using Get-Content
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CLAUDE_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-claude'; claude (Get-Content '%CLAUDE_PROMPT_FILE%' -Raw)\""
+powershell -Command "Start-Process powershell -ArgumentList '-NoExit', '-Command', \"cd '%CODEX_PATH%'; `$host.UI.RawUI.WindowTitle = '%FEATURE%-codex'; codex (Get-Content '%CODEX_PROMPT_FILE%' -Raw)\""
 
 echo.
 echo === DONE ===
