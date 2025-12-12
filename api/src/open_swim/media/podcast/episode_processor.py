@@ -4,11 +4,14 @@ from pathlib import Path
 from typing import List
 
 from open_swim.config import config
+from open_swim.messaging.models import SyncItemStatus, SyncPhase, SyncProgressMessage
+from open_swim.messaging.progress import get_progress_reporter
 from open_swim.media.podcast.models import EpisodeRequest
 
 
 def get_episode_segments(episode: EpisodeRequest, episode_path: Path, tmp_path: Path) -> List[Path]:
     """Split a podcast episode, generate intros, and merge segments."""
+    reporter = get_progress_reporter()
     print("Splitting podcast into 10-minute segments...")
     segment_paths = _split_podcast_episode(episode_path=episode_path, output_dir=tmp_path)
 
@@ -17,6 +20,16 @@ def get_episode_segments(episode: EpisodeRequest, episode_path: Path, tmp_path: 
     final_segments: List[Path] = []
     for index, segment_path in enumerate(segment_paths, start=1):
         print(f"Processing segment {index} of {total_segments}...")
+        reporter.report_progress(
+            SyncProgressMessage(
+                phase=SyncPhase.podcast_library,
+                status=SyncItemStatus.segmenting,
+                item_id=episode.id,
+                item_title=episode.title,
+                current_index=index,
+                total_count=total_segments,
+            )
+        )
 
         intro_path = _generate_audio_intro(episode=episode, index=index, total=total_segments, output_dir=tmp_path)
         merged_path = _merge_intro_and_segment(
