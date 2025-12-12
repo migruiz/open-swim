@@ -4,6 +4,7 @@ import tempfile
 from typing import List
 
 from open_swim.media.youtube.download import download_audio
+from open_swim.media.youtube.intro_processor import add_intro_to_video
 from open_swim.media.youtube.library import (
     add_normalized_mp3_to_library,
     get_library_video_info,
@@ -50,9 +51,16 @@ def _sync_video_to_library(video: YoutubeVideo, playlist_id: str) -> None:
             temp_normalized_mp3_path = get_normalized_loudness_file(
                 tmp_path=tmp_path, mp3_file_path=temp_downloaded_mp3_path
             )
+
+            update_video_status(video.id, VideoStatus.ADDING_INTRO)
+            final_mp3_path = add_intro_to_video(
+                video=video,
+                normalized_mp3_path=temp_normalized_mp3_path,
+                output_dir=tmp_path,
+            )
             add_normalized_mp3_to_library(
                 youtube_video=video,
-                temp_normalized_mp3_path=temp_normalized_mp3_path,
+                temp_normalized_mp3_path=final_mp3_path,
                 playlist_id=playlist_id,
             )
     except Exception as exc:
