@@ -67,7 +67,9 @@ def _sync_playlist_to_device(
             shutil.copy2(video_info.mp3_path, destination_path)
             print(f"[Device Sync] Copied: {filename} -> {playlist_title}/")
         except Exception as e:
-            print(f"[Device Sync] Error copying {filename}: {e}")
+            raise RuntimeError(
+                f"[Device Sync] Failed to copy '{filename}' to playlist '{playlist_title}': {e}"
+            ) from e
 
     print(f"[Device Sync] Completed playlist: {playlist_title}")
 
