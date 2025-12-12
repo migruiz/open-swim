@@ -10,6 +10,7 @@ class VideoStatus(str, Enum):
     PENDING = "pending"
     DOWNLOADING = "downloading"
     NORMALIZING = "normalizing"
+    ADDING_INTRO = "adding_intro"
     READY = "ready"
     ERROR = "error"
 
