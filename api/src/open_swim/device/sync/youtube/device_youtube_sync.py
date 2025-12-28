@@ -4,6 +4,10 @@ import hashlib
 from typing import List, Dict
 
 from open_swim.config import config
+
+# Maximum number of videos to sync per playlist (newest first)
+PLAYLIST_SYNC_LIMIT = int(os.environ.get("PLAYLIST_SYNC_LIMIT", "20"))
+
 from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.messaging.models import SyncItemStatus, SyncPhase, SyncProgressMessage
 from open_swim.messaging.progress import get_progress_reporter
@@ -30,7 +34,7 @@ def _sync_playlist_to_device(
     reporter = get_progress_reporter()
     playlist_title = sanitize_playlist_title(playlist.title)
     playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
-    videos_in_desc_order = list(reversed(playlist.videos))
+    videos_in_desc_order = list(reversed(playlist.videos))[:PLAYLIST_SYNC_LIMIT]
 
     # Calculate current playlist hash
     current_hash = _calculate_playlist_hash(videos_in_desc_order)
