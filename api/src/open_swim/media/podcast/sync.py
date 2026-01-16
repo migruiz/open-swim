@@ -10,6 +10,8 @@ import requests
 from open_swim.config import config
 from open_swim.media.podcast.episode_processor import get_episode_segments
 from open_swim.media.podcast.episodes_to_sync import load_episodes_to_sync
+from open_swim.messaging.models import SyncItemStatus, SyncPhase, SyncProgressMessage
+from open_swim.messaging.progress import get_progress_reporter
 from open_swim.media.podcast.models import (
     EpisodeRecord,
     EpisodeRequest,
@@ -22,12 +24,16 @@ from open_swim.media.podcast import store
 def sync_podcast_episodes() -> None:
     """Sync multiple podcast episodes by processing each one."""
     episodes = load_episodes_to_sync()
-    for episode in episodes:
-        _process_podcast_episode(episode=episode)
+    total = len(episodes)
+    for index, episode in enumerate(episodes, start=1):
+        _process_podcast_episode(episode=episode, current_index=index, total_count=total)
 
 
-def _process_podcast_episode(episode: EpisodeRequest) -> None:
+def _process_podcast_episode(
+    episode: EpisodeRequest, current_index: int, total_count: int
+) -> None:
     """Process a podcast episode by downloading, splitting, adding intros, and merging segments."""
+    reporter = get_progress_reporter()
     library_info = store.load_library()
     existing = library_info.episodes.get(episode.id)
     if (
@@ -37,35 +43,92 @@ def _process_podcast_episode(episode: EpisodeRequest) -> None:
         and os.path.exists(existing.episode_dir)
     ):
         print(f"Episode {episode.id} already processed. Skipping.")
+        reporter.report_progress(
+            SyncProgressMessage(
+                phase=SyncPhase.podcast_library,
+                status=SyncItemStatus.skipped,
+                item_id=episode.id,
+                item_title=episode.title,
+                current_index=current_index,
+                total_count=total_count,
+            )
+        )
         return
 
-    _upsert_episode_record(library_info, episode, status=EpisodeStatus.DOWNLOADING)
-
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
-
-        print(f"Downloading podcast from {episode.download_url}...")
-        episode_path = _download_podcast(url=episode.download_url, output_dir=tmp_path)
-
-        _upsert_episode_record(library_info, episode, status=EpisodeStatus.SEGMENTING)
-
-        final_segments = get_episode_segments(
-            episode=episode,
-            episode_path=episode_path,
-            tmp_path=tmp_path,
+    try:
+        reporter.report_progress(
+            SyncProgressMessage(
+                phase=SyncPhase.podcast_library,
+                status=SyncItemStatus.downloading,
+                item_id=episode.id,
+                item_title=episode.title,
+                current_index=current_index,
+                total_count=total_count,
+            )
         )
+        _upsert_episode_record(library_info, episode, status=EpisodeStatus.DOWNLOADING)
 
-        episode_dir = _get_library_episode_directory(episode)
-        _copy_episode_segments_to_library(episode_dir=episode_dir, segments_paths=final_segments)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
 
-        _upsert_episode_record(
-            library_info,
-            episode,
-            status=EpisodeStatus.READY,
-            episode_dir=str(episode_dir),
-            segment_count=len(final_segments),
+            print(f"Downloading podcast from {episode.download_url}...")
+            episode_path = _download_podcast(url=episode.download_url, output_dir=tmp_path)
+
+            reporter.report_progress(
+                SyncProgressMessage(
+                    phase=SyncPhase.podcast_library,
+                    status=SyncItemStatus.segmenting,
+                    item_id=episode.id,
+                    item_title=episode.title,
+                    current_index=current_index,
+                    total_count=total_count,
+                )
+            )
+            _upsert_episode_record(library_info, episode, status=EpisodeStatus.SEGMENTING)
+
+            final_segments = get_episode_segments(
+                episode=episode,
+                episode_path=episode_path,
+                tmp_path=tmp_path,
+            )
+
+            episode_dir = _get_library_episode_directory(episode)
+            _copy_episode_segments_to_library(
+                episode_dir=episode_dir, segments_paths=final_segments
+            )
+
+            _upsert_episode_record(
+                library_info,
+                episode,
+                status=EpisodeStatus.READY,
+                episode_dir=str(episode_dir),
+                segment_count=len(final_segments),
+            )
+            print(f"Processing complete! Generated {len(final_segments)} segments.")
+            reporter.report_progress(
+                SyncProgressMessage(
+                    phase=SyncPhase.podcast_library,
+                    status=SyncItemStatus.completed,
+                    item_id=episode.id,
+                    item_title=episode.title,
+                    current_index=current_index,
+                    total_count=total_count,
+                )
+            )
+    except Exception as exc:
+        print(f"[Error] Failed to sync episode {episode.title} - {episode.id}: {exc}")
+        _upsert_episode_record(library_info, episode, status=EpisodeStatus.ERROR, error_message=str(exc))
+        reporter.report_progress(
+            SyncProgressMessage(
+                phase=SyncPhase.podcast_library,
+                status=SyncItemStatus.error,
+                item_id=episode.id,
+                item_title=episode.title,
+                current_index=current_index,
+                total_count=total_count,
+                error_message=str(exc),
+            )
         )
-        print(f"Processing complete! Generated {len(final_segments)} segments.")
 
 
 def _upsert_episode_record(
