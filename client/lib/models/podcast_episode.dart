@@ -49,6 +49,17 @@ class PodcastEpisode {
     };
   }
 
+  /// Convert to JSON for caching (matches fromJson format)
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'title': title,
+      'published': published.toIso8601String(),
+      'duration': durationSeconds.toString(),
+      'mediaURL': mediaUrl,
+    };
+  }
+
   String get formattedDuration {
     final hours = durationSeconds ~/ 3600;
     final minutes = (durationSeconds % 3600) ~/ 60;

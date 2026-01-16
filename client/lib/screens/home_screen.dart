@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   AppMqttConnectionState _connectionState = AppMqttConnectionState.disconnected;
   Set<String> _syncedEpisodeIds = {};
+  DateTime? _lastRefreshed;
 
   // Update state
   UpdateInfo? _updateInfo;
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   StreamSubscription<AppMqttConnectionState>? _connectionStateSubscription;
   StreamSubscription<List<dynamic>>? _episodesToSyncSubscription;
+  StreamSubscription<DateTime?>? _lastRefreshedSubscription;
 
   @override
   void initState() {
@@ -75,6 +77,21 @@ class _HomeScreenState extends State<HomeScreen>
         _syncedEpisodeIds = ids;
       });
       _podcastService.applySelectedIds(ids);
+    });
+
+    // Listen to last refreshed timestamp changes
+    _lastRefreshedSubscription =
+        _podcastService.lastRefreshedStream.listen((timestamp) {
+      if (mounted) {
+        setState(() {
+          _lastRefreshed = timestamp;
+        });
+      }
+    });
+
+    // Load cached data first, then connect
+    _podcastService.loadFromCache().then((_) {
+      _lastRefreshed = _podcastService.lastRefreshed;
     });
 
     // Initial connection
@@ -124,9 +141,15 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController.dispose();
     _connectionStateSubscription?.cancel();
     _episodesToSyncSubscription?.cancel();
+    _lastRefreshedSubscription?.cancel();
     _mqttService.dispose();
     _podcastService.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshAll() async {
+    await _podcastService.fetchEpisodes();
+    _mqttService.requestEpisodesToSync();
   }
 
   void _onEpisodeToggled(PodcastEpisode episode) {
@@ -230,6 +253,8 @@ class _HomeScreenState extends State<HomeScreen>
                   podcastService: _podcastService,
                   syncedEpisodeIds: _syncedEpisodeIds,
                   onEpisodeToggled: _onEpisodeToggled,
+                  onRefresh: _refreshAll,
+                  lastRefreshed: _lastRefreshed,
                 ),
                 ..._playlists.map((p) => YouTubeTab(playlist: p)),
               ],

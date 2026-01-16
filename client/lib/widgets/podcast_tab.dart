@@ -8,12 +8,16 @@ class PodcastTab extends StatefulWidget {
   final PodcastService podcastService;
   final Set<String> syncedEpisodeIds;
   final ValueChanged<PodcastEpisode> onEpisodeToggled;
+  final VoidCallback onRefresh;
+  final DateTime? lastRefreshed;
 
   const PodcastTab({
     super.key,
     required this.podcastService,
     required this.syncedEpisodeIds,
     required this.onEpisodeToggled,
+    required this.onRefresh,
+    this.lastRefreshed,
   });
 
   @override
@@ -107,8 +111,56 @@ class _PodcastTabState extends State<PodcastTab> {
     return items;
   }
 
-  Future<void> _refresh() async {
-    await widget.podcastService.fetchEpisodes();
+  String _formatLastRefreshed(DateTime? timestamp) {
+    if (timestamp == null) return 'Never';
+
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} ${diff.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} ${diff.inHours == 1 ? 'hour' : 'hours'} ago';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[timestamp.month - 1]} ${timestamp.day}';
+    }
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.grey.shade100,
+      child: Row(
+        children: [
+          Text(
+            'Last refreshed: ${_formatLastRefreshed(widget.lastRefreshed)}',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 13,
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.refresh, size: 20),
+              onPressed: widget.onRefresh,
+              tooltip: 'Refresh',
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -132,7 +184,7 @@ class _PodcastTabState extends State<PodcastTab> {
             ),
             const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: _refresh,
+              onPressed: widget.onRefresh,
               child: const Text('Retry'),
             ),
           ],
@@ -142,22 +194,26 @@ class _PodcastTabState extends State<PodcastTab> {
 
     final items = _buildEpisodeList();
 
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView.separated(
-        itemCount: items.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return EpisodeTile(
-            episode: item.episode,
-            isSyncedOnly: item.isSyncedOnly,
-            onChanged: (value) {
-              widget.onEpisodeToggled(item.episode);
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: ListView.separated(
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return EpisodeTile(
+                episode: item.episode,
+                isSyncedOnly: item.isSyncedOnly,
+                onChanged: (value) {
+                  widget.onEpisodeToggled(item.episode);
+                },
+              );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

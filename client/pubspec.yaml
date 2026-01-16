@@ -36,6 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   mqtt_client: ^10.3.0
 
+  # Local caching
+  shared_preferences: ^2.2.2
+
   # In-app update checker
   http: ^1.2.2
   package_info_plus: ^8.1.3
