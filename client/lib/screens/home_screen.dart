@@ -9,12 +9,6 @@ import '../widgets/connection_status_bar.dart';
 import '../widgets/podcast_tab.dart';
 import '../widgets/youtube_tab.dart';
 
-// Hardcoded YouTube playlists (temporary)
-final _playlists = [
-  const YouTubePlaylist(id: 'PLxx1', title: 'Playlist 1'),
-  const YouTubePlaylist(id: 'PLxx2', title: 'Playlist 2'),
-];
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -23,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   final MqttService _mqttService = MqttService();
   final PodcastService _podcastService = PodcastService();
@@ -38,8 +32,12 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isDownloading = false;
   double _downloadProgress = 0;
 
+  // Dynamic playlists loaded from API
+  List<YouTubePlaylist> _playlists = [];
+
   StreamSubscription<AppMqttConnectionState>? _connectionStateSubscription;
   StreamSubscription<List<dynamic>>? _episodesToSyncSubscription;
+  StreamSubscription<List<dynamic>>? _playlistsToSyncSubscription;
   StreamSubscription<DateTime?>? _lastRefreshedSubscription;
 
   @override
@@ -61,7 +59,23 @@ class _HomeScreenState extends State<HomeScreen>
       // On connect, request current sync state
       if (state == AppMqttConnectionState.connected) {
         _mqttService.requestEpisodesToSync();
+        _mqttService.requestPlaylistsToSync();
       }
+    });
+
+    // Listen to playlists-to-sync responses
+    _playlistsToSyncSubscription =
+        _mqttService.playlistsToSyncResponse.listen((playlists) {
+      final newPlaylists = <YouTubePlaylist>[];
+      for (final pl in playlists) {
+        if (pl is Map<String, dynamic> && pl['id'] != null && pl['title'] != null) {
+          newPlaylists.add(YouTubePlaylist(
+            id: pl['id'] as String,
+            title: pl['title'] as String,
+          ));
+        }
+      }
+      _updatePlaylists(newPlaylists);
     });
 
     // Listen to episodes-to-sync responses
@@ -141,10 +155,37 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController.dispose();
     _connectionStateSubscription?.cancel();
     _episodesToSyncSubscription?.cancel();
+    _playlistsToSyncSubscription?.cancel();
     _lastRefreshedSubscription?.cancel();
     _mqttService.dispose();
     _podcastService.dispose();
     super.dispose();
+  }
+
+  void _updatePlaylists(List<YouTubePlaylist> newPlaylists) {
+    if (!mounted) return;
+
+    // Check if playlists actually changed
+    final oldIds = _playlists.map((p) => p.id).toSet();
+    final newIds = newPlaylists.map((p) => p.id).toSet();
+    if (oldIds.length == newIds.length && oldIds.containsAll(newIds)) return;
+
+    final oldController = _tabController;
+    final oldIndex = oldController.index;
+
+    setState(() {
+      _playlists = newPlaylists;
+      _tabController = TabController(
+        length: 1 + _playlists.length,
+        vsync: this,
+        initialIndex: oldIndex.clamp(0, _playlists.length),
+      );
+    });
+
+    // Dispose old controller after the frame completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldController.dispose();
+    });
   }
 
   Future<void> _refreshAll() async {

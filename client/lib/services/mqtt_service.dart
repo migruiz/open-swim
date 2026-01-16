@@ -28,6 +28,12 @@ class MqttService {
   Stream<List<dynamic>> get episodesToSyncResponse =>
       _episodesToSyncController.stream;
 
+  // Playlists to sync response stream
+  final StreamController<List<dynamic>> _playlistsToSyncController =
+      StreamController<List<dynamic>>.broadcast();
+  Stream<List<dynamic>> get playlistsToSyncResponse =>
+      _playlistsToSyncController.stream;
+
   // Connection state stream
   final StreamController<AppMqttConnectionState> _connectionStateController =
       StreamController<AppMqttConnectionState>.broadcast();
@@ -184,6 +190,13 @@ class MqttService {
         } catch (e) {
           print('Failed to parse episodes-to-sync response: $e');
         }
+      } else if (topic == 'openswim/playlists-to-sync/response') {
+        try {
+          final List<dynamic> data = _parseJson(payload);
+          _playlistsToSyncController.add(data);
+        } catch (e) {
+          print('Failed to parse playlists-to-sync response: $e');
+        }
       } else {
         _messageController.add(payload);
       }
@@ -228,6 +241,11 @@ class MqttService {
     publishMessage('openswim/episodes-to-sync/request', '');
   }
 
+  void requestPlaylistsToSync() {
+    subscribeToTopic('openswim/playlists-to-sync/response');
+    publishMessage('openswim/playlists-to-sync/request', '');
+  }
+
   void disconnect() {
     _intentionalDisconnect = true;
     _reconnectTimer?.cancel();
@@ -263,6 +281,7 @@ class MqttService {
     _messageController.close();
     _connectionStateController.close();
     _episodesToSyncController.close();
+    _playlistsToSyncController.close();
     client?.disconnect();
   }
 }
