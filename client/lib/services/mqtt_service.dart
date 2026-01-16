@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -20,6 +21,12 @@ class MqttService {
   final StreamController<String> _messageController =
       StreamController<String>.broadcast();
   Stream<String> get messages => _messageController.stream;
+
+  // Episodes to sync response stream
+  final StreamController<List<dynamic>> _episodesToSyncController =
+      StreamController<List<dynamic>>.broadcast();
+  Stream<List<dynamic>> get episodesToSyncResponse =>
+      _episodesToSyncController.stream;
 
   // Connection state stream
   final StreamController<AppMqttConnectionState> _connectionStateController =
@@ -165,10 +172,27 @@ class MqttService {
       final recMess = messages[0].payload as MqttPublishMessage;
       final payload =
           MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+      final topic = messages[0].topic;
 
-      print('Received message on topic ${messages[0].topic}: $payload');
-      _messageController.add(payload);
+      print('Received message on topic $topic: $payload');
+
+      // Route to specific streams based on topic
+      if (topic == 'openswim/episodes-to-sync/response') {
+        try {
+          final List<dynamic> data = _parseJson(payload);
+          _episodesToSyncController.add(data);
+        } catch (e) {
+          print('Failed to parse episodes-to-sync response: $e');
+        }
+      } else {
+        _messageController.add(payload);
+      }
     });
+  }
+
+  List<dynamic> _parseJson(String payload) {
+    if (payload.isEmpty) return [];
+    return json.decode(payload) as List<dynamic>;
   }
 
   void _resubscribeToTopics() {
@@ -197,6 +221,11 @@ class MqttService {
     } else {
       print('Cannot publish - not connected');
     }
+  }
+
+  void requestEpisodesToSync() {
+    subscribeToTopic('openswim/episodes-to-sync/response');
+    publishMessage('openswim/episodes-to-sync/request', '');
   }
 
   void disconnect() {
@@ -233,6 +262,7 @@ class MqttService {
     _updatesSubscription?.cancel();
     _messageController.close();
     _connectionStateController.close();
+    _episodesToSyncController.close();
     client?.disconnect();
   }
 }

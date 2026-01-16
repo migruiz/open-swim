@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from open_swim.config import config
 from open_swim.device import create_device_monitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
+from open_swim.media.podcast import store as podcast_store
 from open_swim.sync import enqueue_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
 from open_swim.media.youtube.playlists import fetch_playlist_information
@@ -68,6 +69,7 @@ def _on_mqtt_connected(client: MqttClient) -> None:
     client.subscribe("openswim/episodes_to_sync")
     client.subscribe("openswim/playlists_to_sync")
     client.subscribe("openswim/playlist-info/request")
+    client.subscribe("openswim/episodes-to-sync/request")
     enqueue_sync()
 
 
@@ -81,6 +83,8 @@ def _on_mqtt_message(client: MqttClient, topic: str, message: Any) -> None:
             update_playlists_to_sync(str(message))
         case "openswim/playlist-info/request":
             _handle_playlist_info_request(client=client, message=str(message))
+        case "openswim/episodes-to-sync/request":
+            _handle_episodes_to_sync_request(client=client)
         case _:
             print(f"[MQTT] Unhandled topic {topic}")
 
@@ -101,6 +105,22 @@ def _playlist_url_from_input(value: str) -> str:
     if raw.startswith("http://") or raw.startswith("https://"):
         return raw
     return f"https://youtube.com/playlist?list={raw}"
+
+
+def _handle_episodes_to_sync_request(client: MqttClient) -> None:
+    """Handle request for current episodes to sync list."""
+    try:
+        episodes = podcast_store.load_episode_requests()
+        response = json.dumps([ep.model_dump(mode="json") for ep in episodes])
+        client.publish(
+            "openswim/episodes-to-sync/response",
+            response,
+            qos=1,
+            retain=False,
+        )
+        print(f"[MQTT] Published episodes-to-sync response with {len(episodes)} episodes")
+    except Exception as exc:
+        print(f"[MQTT] Failed to handle episodes-to-sync request: {exc}")
 
 
 def _handle_playlist_info_request(client: MqttClient, message: str) -> None:
