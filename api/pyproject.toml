@@ -40,4 +40,5 @@ strict_equality = true
 dev = [
     "mypy>=1.18.2",
     "types-requests>=2.31.0.20241016",
+    "pytest>=8.0.0",
 ]

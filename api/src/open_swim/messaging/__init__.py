@@ -2,8 +2,8 @@ from open_swim.messaging.models import (
     PlaylistInfoRequest,
     PlaylistInfoResponse,
     PlaylistInfoVideoItem,
-    SyncItemStatus,
-    SyncPhase,
+    StageStatus,
+    SyncStage,
     SyncProgressMessage,
 )
 from open_swim.messaging.progress import (
@@ -18,8 +18,8 @@ __all__ = [
     "PlaylistInfoRequest",
     "PlaylistInfoResponse",
     "PlaylistInfoVideoItem",
-    "SyncItemStatus",
-    "SyncPhase",
+    "StageStatus",
+    "SyncStage",
     "SyncProgressMessage",
     "MqttProgressReporter",
     "NullProgressReporter",

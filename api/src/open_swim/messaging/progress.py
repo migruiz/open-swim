@@ -22,13 +22,6 @@ class MqttProgressReporter:
         self._mqtt_client = mqtt_client
 
     def report_progress(self, message: SyncProgressMessage) -> None:
-        if message.percentage is None:
-            if message.current_index is not None and message.total_count:
-                try:
-                    message.percentage = (message.current_index / message.total_count) * 100.0
-                except Exception:
-                    message.percentage = None
-
         try:
             payload = message.model_dump_json()
             self._mqtt_client.publish("openswim/sync/progress", payload, qos=0, retain=False)
@@ -36,20 +29,11 @@ class MqttProgressReporter:
             print(f"[MQTT] Failed to publish progress: {exc}")
 
         try:
-            summary = json.dumps(
-                {
-                    "phase": message.phase,
-                    "status": message.status,
-                    "playlist_id": message.playlist_id,
-                    "item_id": message.item_id,
-                    "current_index": message.current_index,
-                    "total_count": message.total_count,
-                    "percentage": message.percentage,
-                    "error_message": message.error_message,
-                },
-                default=str,
-            )
-            print(f"[PROGRESS] {summary}")
+            stages_summary = [
+                {"name": s.name, "status": s.status.value, "error": s.error}
+                for s in message.stages
+            ]
+            print(f"[PROGRESS] {json.dumps(stages_summary)}")
         except Exception:
             print("[PROGRESS] (failed to format progress message)")
 
