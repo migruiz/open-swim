@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:xml/xml.dart';
 import '../models/podcast_episode.dart';
 
 class PodcastService {
-  static const String _baseUrl = 'https://podbay.fm/api/podcast';
-  static const String _podcastSlug = 'the-billy-madison-show-podcast';
+  static const String _feedUrl =
+      'https://rss-cmg.streamguys1.com/sanantonio/san995/the-billy-madison-sh.xml';
   static const String _cacheKeyEpisodes = 'podcast_episodes';
   static const String _cacheKeyLastRefreshed = 'podcast_last_refreshed';
 
@@ -78,27 +79,46 @@ class PodcastService {
     _errorController.add(null);
 
     try {
-      // Fetch pages 0 and 1 in parallel
-      final results = await Future.wait([
-        _fetchPage(0),
-        _fetchPage(1),
-      ]);
+      print('Fetching podcast RSS feed: $_feedUrl');
+      final response = await http.get(Uri.parse(_feedUrl));
 
-      final allEpisodes = <PodcastEpisode>[];
-      for (final pageEpisodes in results) {
-        allEpisodes.addAll(pageEpisodes);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
       }
 
-      // Remove duplicates based on id
-      final seen = <String>{};
-      final uniqueEpisodes = allEpisodes.where((e) => seen.add(e.id)).toList();
+      final document = XmlDocument.parse(response.body);
+      final items = document.findAllElements('item');
 
-      _cachedEpisodes = uniqueEpisodes;
-      _episodesController.add(uniqueEpisodes);
+      final episodes = <PodcastEpisode>[];
+      for (final item in items) {
+        try {
+          final title = item.getElement('title')?.innerText ?? '';
+          final guid = item.getElement('guid')?.innerText ?? '';
+          final pubDate = item.getElement('pubDate')?.innerText;
+          final enclosure = item.getElement('enclosure');
+          final mediaUrl = enclosure?.getAttribute('url') ?? '';
+          final durationStr =
+              item.getElement('itunes:duration')?.innerText ?? '0';
+
+          if (guid.isEmpty || mediaUrl.isEmpty) continue;
+
+          episodes.add(PodcastEpisode(
+            id: guid,
+            title: title,
+            published: pubDate != null ? _parseRfc2822(pubDate) : DateTime.now(),
+            durationSeconds: _parseDuration(durationStr),
+            mediaUrl: mediaUrl,
+          ));
+        } catch (e) {
+          print('Error parsing RSS item: $e');
+        }
+      }
+
+      _cachedEpisodes = episodes;
+      _episodesController.add(episodes);
       _loadingController.add(false);
 
-      // Save to cache after successful fetch
-      await _saveToCache(uniqueEpisodes);
+      await _saveToCache(episodes);
     } catch (e) {
       print('Error fetching episodes: $e');
       _errorController.add('Failed to load episodes: $e');
@@ -106,23 +126,44 @@ class PodcastService {
     }
   }
 
-  Future<List<PodcastEpisode>> _fetchPage(int page) async {
-    final url = Uri.parse('$_baseUrl?slug=$_podcastSlug&reverse=false&page=$page');
-    print('Fetching podcast page $page: $url');
-
-    final response = await http.get(url);
-
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}');
+  /// Parse RSS duration which can be HH:MM:SS, MM:SS, or just seconds
+  int _parseDuration(String duration) {
+    if (duration.contains(':')) {
+      final parts = duration.split(':').map(int.parse).toList();
+      if (parts.length == 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      } else if (parts.length == 2) {
+        return parts[0] * 60 + parts[1];
+      }
     }
+    return int.tryParse(duration) ?? 0;
+  }
 
-    final data = json.decode(response.body);
-    final podcast = data['podcast'] as Map<String, dynamic>?;
-    final episodes = podcast?['episodes'] as List<dynamic>? ?? [];
+  /// Parse RFC 2822 date like "Fri, 27 Mar 2026 09:59:58 -0500"
+  DateTime _parseRfc2822(String date) {
+    const months = {
+      'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+      'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+    };
 
-    return episodes
-        .map((e) => PodcastEpisode.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      // Remove day-of-week prefix if present
+      final str = date.contains(',') ? date.split(',')[1].trim() : date.trim();
+      final parts = str.split(RegExp(r'\s+'));
+      // Expected: DD Mon YYYY HH:MM:SS +/-HHMM
+      final day = int.parse(parts[0]);
+      final month = months[parts[1]] ?? 1;
+      final year = int.parse(parts[2]);
+      final timeParts = parts[3].split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      final second = timeParts.length > 2 ? int.parse(timeParts[2]) : 0;
+
+      return DateTime.utc(year, month, day, hour, minute, second);
+    } catch (e) {
+      print('Error parsing date "$date": $e');
+      return DateTime.now();
+    }
   }
 
   void updateSelection(String episodeId, bool isSelected) {

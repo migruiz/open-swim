@@ -15,7 +15,7 @@ class PodcastEpisode {
     this.isSelected = false,
   });
 
-  /// Parse from podbay.fm API response
+  /// Parse from cached JSON
   factory PodcastEpisode.fromJson(Map<String, dynamic> json) {
     final durationStr = json['duration'] as String? ?? '0';
     return PodcastEpisode(

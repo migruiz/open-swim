@@ -39,6 +39,9 @@ dependencies:
   # Local caching
   shared_preferences: ^2.2.2
 
+  # RSS feed parsing
+  xml: ^6.5.0
+
   # In-app update checker
   http: ^1.2.2
   package_info_plus: ^8.1.3
