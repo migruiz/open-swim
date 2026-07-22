@@ -1,7 +1,8 @@
 import os
 import shutil
 import hashlib
-from typing import List, Dict
+import time
+from typing import List, Dict, Optional
 
 from open_swim.config import config
 
@@ -13,6 +14,40 @@ from open_swim.media.youtube.library import load_library
 from open_swim.device.sync.state import DevicePlaylistState, load_sync_state, save_sync_state
 from open_swim.media.youtube.models import YouTubeLibrary
 from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo
+
+
+def _reset_device_folder(path: str, attempts: int = 40, delay: float = 0.25) -> None:
+    """Remove and recreate a folder, tolerating Windows' asynchronous directory
+    deletion on removable drives.
+
+    On Windows, ``shutil.rmtree`` can return while the directory is still in a
+    "delete pending" state until the last handle is released. Recreating it
+    immediately races that pending delete: ``os.makedirs`` may raise
+    ``PermissionError`` (WinError 5), or succeed only for the pending delete to
+    remove it moments later, leaving the following file copies to fail with
+    ``FileNotFoundError`` (ENOENT). Poll until the delete settles, then create.
+    """
+    if os.path.exists(path):
+        shutil.rmtree(path, ignore_errors=True)
+
+    # Wait for the asynchronous delete to actually complete before recreating.
+    for _ in range(attempts):
+        if not os.path.exists(path):
+            break
+        time.sleep(delay)
+
+    # Recreate, retrying while Windows still reports the path as delete-pending.
+    last_exc: Optional[Exception] = None
+    for _ in range(attempts):
+        try:
+            os.makedirs(path, exist_ok=True)
+            if os.path.isdir(path):
+                return
+        except OSError as exc:  # PermissionError / FileNotFoundError during pending delete
+            last_exc = exc
+        time.sleep(delay)
+
+    raise RuntimeError(f"[Device Sync] Could not create folder '{path}': {last_exc}")
 
 
 def _calculate_playlist_hash(videos: List[YoutubeVideo]) -> str:
@@ -43,11 +78,8 @@ def _sync_playlist_to_device(
 
     print(f"[Device Sync] Processing playlist: {playlist_title}")
 
-    if os.path.exists(playlist_folder_path):
-        print(f"[Device Sync] Removing existing folder: {playlist_folder_path}")
-        shutil.rmtree(playlist_folder_path)
-
-    os.makedirs(playlist_folder_path, exist_ok=True)
+    print(f"[Device Sync] Resetting folder: {playlist_folder_path}")
+    _reset_device_folder(playlist_folder_path)
     print(f"[Device Sync] Created folder: {playlist_folder_path}")
 
     # Copy newest/last-added items first so files land on the device in descending order

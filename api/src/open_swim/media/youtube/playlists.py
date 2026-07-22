@@ -62,10 +62,17 @@ def fetch_playlist_information(playlist_url: str, playlist_title: str) -> Playli
             if not entry:
                 continue
 
+            # Unavailable/private/deleted videos come back with explicit null
+            # fields (e.g. "title": null), so `.get(key, default)` still yields
+            # None. Skip entries without a usable id and coerce null title/url.
+            video_id = entry.get("id") or ""
+            if not video_id:
+                continue
+
             video = YoutubeVideo(
-                id=entry.get("id", ""),
-                title=entry.get("title", "Unknown Title"),
-                url=entry.get("url", f"https://www.youtube.com/watch?v={entry.get('id', '')}"),
+                id=video_id,
+                title=entry.get("title") or "Unknown Title",
+                url=entry.get("url") or f"https://www.youtube.com/watch?v={video_id}",
             )
             videos.append(video)
 
