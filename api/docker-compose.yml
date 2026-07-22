@@ -10,7 +10,14 @@ services:
       - /dev:/dev
     volumes:
       - /mnt/openswim:/mnt/openswim:shared
+      # Persist the self-updating yt-dlp binary across restarts and rebuilds.
+      - ytdlp-bin:/opt/ytdlp
     environment:
       - MQTT_BROKER_URI=mqtt://host.docker.internal:1883
+      # How often the background updater refreshes yt-dlp (days).
+      - YTDLP_UPDATE_INTERVAL_DAYS=7
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+volumes:
+  ytdlp-bin:

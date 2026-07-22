@@ -52,16 +52,26 @@ FROM --platform=$TARGETPLATFORM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     # Add the venv to PATH so we can run 'open-swim' directly
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    # yt-dlp lives on a persistent volume and self-updates (see docker-entrypoint.sh)
+    YTDLP_DIR="/opt/ytdlp" \
+    YTDLP_PATH="/opt/ytdlp/yt-dlp" \
+    YTDLP_UPDATE_INTERVAL_DAYS="7"
 
 WORKDIR /app
 
 # 1. Install Runtime System Dependencies
 # We only need the libraries to RUN the app, not build it.
+# curl + ca-certificates are needed to fetch/refresh the standalone yt-dlp binary.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     util-linux \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Directory for the persistent yt-dlp binary (mount a volume here).
+RUN mkdir -p /opt/ytdlp
 
 # 2. Copy the Voice Assets from Stage 1
 COPY --from=assets /voices /voices
@@ -73,5 +83,10 @@ COPY --from=builder /app/.venv /app/.venv
 # 4. Create mount point
 RUN mkdir -p /mnt/openswim
 
+# 5. Entrypoint keeps yt-dlp fresh on the volume, then launches the app.
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Note: Container must be run with --privileged flag for mounting
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["open-swim"]
