@@ -71,11 +71,10 @@ def _generate_audio_intro(episode: EpisodeRequest, index: int, total: int, outpu
         *piper_cmd_parts,
         '-m', config.piper_voice_model_path,
         '-f', str(wav_output),
-        '--', text
     ]
 
     # Pipe the text to piper via stdin
-    subprocess.run(cmd, check=True, capture_output=True)
+    subprocess.run(cmd, input=text, text=True, check=True, capture_output=True)
 
     # Convert WAV to MP3 using ffmpeg
     cmd = [
@@ -112,7 +111,7 @@ def _merge_intro_and_segment(episode: EpisodeRequest, segment_path: Path, intro_
 
     # Create a temporary file list for ffmpeg concat
     concat_list_path = output_dir / f"concat_list_{index}.txt"
-    with open(concat_list_path, 'w') as f:
+    with open(concat_list_path, 'w', encoding='utf-8') as f:
         f.write(f"file '{intro_path.absolute()}'\n")
         f.write(f"file '{silence_path.absolute()}'\n")
         f.write(f"file '{segment_path.absolute()}'\n")

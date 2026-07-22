@@ -9,7 +9,8 @@ from open_swim.media.youtube.playlists import YoutubeVideo
 
 def _generate_title_audio(video: YoutubeVideo, output_dir: Path) -> Path:
     """Generate an MP3 TTS intro speaking the video title."""
-    safe_title = re.sub(r"\s+", " ", video.title or "").strip()
+    safe_title = re.sub(r"[^\w\s.,!?'\"-]", "", video.title or "")
+    safe_title = re.sub(r"\s+", " ", safe_title).strip()
     if not safe_title:
         safe_title = "Unknown title"
 
@@ -24,10 +25,13 @@ def _generate_title_audio(video: YoutubeVideo, output_dir: Path) -> Path:
         config.piper_voice_model_path,
         "-f",
         str(wav_output),
-        "--",
-        safe_title,
     ]
-    subprocess.run(cmd, check=True, capture_output=True)
+    print(f"Running piper command: {cmd}")
+    result = subprocess.run(cmd, input=safe_title, text=True, capture_output=True, encoding="utf-8")
+    if result.returncode != 0:
+        print(f"Piper stderr: {result.stderr}")
+        print(f"Piper stdout: {result.stdout}")
+        raise RuntimeError(f"Piper failed with exit code {result.returncode}: {result.stderr}")
 
     cmd = [
         config.ffmpeg_path,
