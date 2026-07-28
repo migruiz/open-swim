@@ -16,8 +16,6 @@ INTERVAL_SECS=$(( INTERVAL_DAYS * 86400 ))
 pick_asset() {
   case "$(uname -m)" in
     aarch64|arm64)  echo "yt-dlp_linux_aarch64" ;;
-    x86_64|amd64)   echo "yt-dlp_linux" ;;
-    armv7l|armv6l)  echo "yt-dlp_linux_armv7l" ;;
     *)              echo "" ;;
   esac
 }
