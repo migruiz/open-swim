@@ -5,8 +5,6 @@ import sys
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlparse
 
-from dotenv import load_dotenv
-
 from open_swim.config import config
 from open_swim.device import create_device_monitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
@@ -22,8 +20,6 @@ from open_swim.messaging.models import (
 from open_swim.messaging.mqtt import MqttClient
 from open_swim.messaging.progress import MqttProgressReporter, set_progress_reporter
 
-
-load_dotenv()
 
 # Module-level instances for access by callbacks
 _device_monitor = None

@@ -67,10 +67,12 @@ def work() -> None:
     )
     stages.append(stage2)
     _report_stages(stages)
+    youtube_library_ok = False
     try:
         playlists_to_sync = get_playlists_to_sync()
         sync_youtube_playlists_to_library(playlists_to_sync)
         stage2.status = StageStatus.completed
+        youtube_library_ok = True
     except Exception as e:
         stage2.status = StageStatus.error
         stage2.error = str(e)
@@ -84,21 +86,27 @@ def work() -> None:
         return
 
     # Stage 3: Device YouTube
-    stage3 = SyncStage(
-        name="device_youtube",
-        label="Copy YouTube to device",
-        status=StageStatus.running,
-    )
-    stages.append(stage3)
-    _report_stages(stages)
-    try:
-        sync_playlists_directories(playlists_to_sync)
-        sync_device_playlists_videos(play_lists=playlists_to_sync)
-        stage3.status = StageStatus.completed
-    except Exception as e:
-        stage3.status = StageStatus.error
-        stage3.error = str(e)
-    _report_stages(stages)
+    # Only run when the library stage succeeded. On failure `playlists_to_sync`
+    # is still the empty list it was initialized to, and syncing that would read
+    # as "no playlists requested" and delete every playlist folder on the device.
+    if not youtube_library_ok:
+        print("[SYNC] Skipping device YouTube sync: YouTube library stage failed")
+    else:
+        stage3 = SyncStage(
+            name="device_youtube",
+            label="Copy YouTube to device",
+            status=StageStatus.running,
+        )
+        stages.append(stage3)
+        _report_stages(stages)
+        try:
+            sync_playlists_directories(playlists_to_sync)
+            sync_device_playlists_videos(play_lists=playlists_to_sync)
+            stage3.status = StageStatus.completed
+        except Exception as e:
+            stage3.status = StageStatus.error
+            stage3.error = str(e)
+        _report_stages(stages)
 
     # Stage 4: Device Podcast
     stage4 = SyncStage(

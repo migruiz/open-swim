@@ -18,6 +18,20 @@ def _prepare_device_directories(playlists_to_sync: List[PlaylistInfo]) -> None:
     sd_card_path = config.device_sd_path
     state = load_sync_state(sd_card_path)
 
+    # An empty request list reaches here when something upstream broke -- a
+    # misconfigured LIBRARY_PATH, a missing playlists_to_sync.json, a failed
+    # yt-dlp fetch -- far more often than because the user genuinely
+    # unsubscribed from every playlist. Treating it as "all stale" wipes every
+    # playlist folder off the device, so require an explicit request list before
+    # deleting anything.
+    if not playlists_to_sync and state.playlists:
+        print(
+            f"[Device Sync] No playlists requested but {len(state.playlists)} are "
+            "synced on the device; refusing to remove them. Check LIBRARY_PATH and "
+            "playlists_to_sync.json."
+        )
+        return
+
     playlists_to_sync_by_id = {playlist.id: playlist for playlist in playlists_to_sync}
     existing_playlists_by_id = {playlist.id: playlist for playlist in state.playlists}
 

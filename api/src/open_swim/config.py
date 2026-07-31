@@ -20,6 +20,13 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Optional
 
+from dotenv import load_dotenv
+
+# Must run before the module-level `config` singleton is created at the bottom of
+# this file: every field resolves its environment variable at instantiation time,
+# so a load_dotenv() call in an entry point (app.py) happens too late to be seen.
+load_dotenv()
+
 
 class ConfigurationError(Exception):
     """Raised when required configuration is missing or invalid."""
