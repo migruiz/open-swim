@@ -56,6 +56,12 @@ class Config:
         default_factory=lambda: os.getenv("FFMPEG_PATH", "ffmpeg")
     )
     ytdlp_path: str = field(default_factory=lambda: os.getenv("YTDLP_PATH", "yt-dlp"))
+    # Optional YouTube player client for yt-dlp (e.g. "mweb"). YouTube periodically
+    # blocks the default client's format URLs with HTTP 403; overriding the client
+    # works around it. Empty means "let yt-dlp choose".
+    ytdlp_player_client: str = field(
+        default_factory=lambda: os.getenv("YTDLP_PLAYER_CLIENT", "")
+    )
     piper_cmd: str = field(default_factory=lambda: os.getenv("PIPER_CMD", "piper"))
     piper_voice_model_path: str = field(
         default_factory=lambda: os.getenv(

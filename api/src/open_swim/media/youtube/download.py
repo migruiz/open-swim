@@ -23,8 +23,15 @@ def download_audio(tmp_path: Path, video_id: str) -> str:
         "0",
         "-o",
         str(output_path),
-        video_url,
     ]
+
+    if config.ytdlp_player_client:
+        command += [
+            "--extractor-args",
+            f"youtube:player_client={config.ytdlp_player_client}",
+        ]
+
+    command.append(video_url)
 
     print(f"Downloading: {video_url}")
 
