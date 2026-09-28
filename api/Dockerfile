@@ -17,8 +17,9 @@ RUN curl -L -O "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_U
 # --- STAGE 2: Python Builder (uv) ---
 FROM --platform=linux/arm64 python:3.12-slim AS builder
 
-# Install uv binary
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# Install uv from PyPI rather than copying it from ghcr.io, so the build doesn't
+# depend on the builder's ghcr.io login (a stale one gets "denied").
+RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
