@@ -1,18 +1,36 @@
 import os
 import shutil
 import glob
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from open_swim.config import config
 from open_swim.device.sync.state import load_sync_state, save_sync_state
 from open_swim.media.podcast import store
 from open_swim.media.podcast.episodes_to_sync import load_episodes_to_sync
-from open_swim.media.podcast.models import EpisodeRequest
+from open_swim.media.podcast.models import EpisodeRequest, PodcastLibrary
 
 
 def _get_episode_ids(episodes: List[EpisodeRequest]) -> Set[str]:
     """Extract episode IDs from a list of episodes."""
     return {episode.id for episode in episodes}
+
+
+def _episodes_ready_in_library(
+    episodes: List[EpisodeRequest], library_info: PodcastLibrary
+) -> List[Tuple[EpisodeRequest, str]]:
+    """Requested episodes whose processed segments exist, paired with their folder."""
+    ready: List[Tuple[EpisodeRequest, str]] = []
+    for episode in episodes:
+        episode_info = library_info.episodes.get(episode.id)
+        if episode_info is None:
+            print(f"[Podcast Sync] Episode {episode.id} not found in library, skipping")
+            continue
+        episode_dir = episode_info.episode_dir
+        if not episode_dir or not os.path.exists(episode_dir):
+            print(f"[Podcast Sync] Episode directory does not exist: {episode_dir}, skipping")
+            continue
+        ready.append((episode, episode_dir))
+    return ready
 
 
 def _delete_mp3_files(podcast_folder_path: str) -> None:
@@ -43,32 +61,25 @@ def sync_podcast_episodes_to_device() -> None:
         print("[Podcast Sync] No episodes to sync")
         return
 
+    library_info = store.load_library()
+    ready_episodes = _episodes_ready_in_library(episodes_to_sync, library_info)
+
     state = load_sync_state(device_sdcard_path)
     synced_episode_ids = set(state.podcasts.synced_episode_ids)
-    episodes_to_sync_ids = _get_episode_ids(episodes_to_sync)
+    # Compare against what is actually ready, not what was requested: an episode
+    # still downloading must not be recorded as copied, or it never reaches the device.
+    ready_episode_ids = _get_episode_ids([episode for episode, _ in ready_episodes])
 
-    if episodes_to_sync_ids == synced_episode_ids:
+    if ready_episode_ids == synced_episode_ids:
         print("[Podcast Sync] Episodes already up to date on device. Skipping.")
         return
 
     print("[Podcast Sync] Episode list changed. Syncing to device...")
 
     _delete_mp3_files(podcast_folder_path)
-    library_info = store.load_library()
-    sorted_episodes = sorted(episodes_to_sync, key=lambda e: e.date)
+    sorted_episodes = sorted(ready_episodes, key=lambda item: item[0].date)
 
-    for episode_index, episode in enumerate(sorted_episodes, start=1):
-        if episode.id not in library_info.episodes:
-            print(f"[Podcast Sync] Episode {episode.id} not found in library, skipping")
-            continue
-
-        episode_info = library_info.episodes[episode.id]
-        episode_dir = episode_info.episode_dir
-
-        if not episode_dir or not os.path.exists(episode_dir):
-            print(f"[Podcast Sync] Episode directory does not exist: {episode_dir}, skipping")
-            continue
-
+    for episode, episode_dir in sorted_episodes:
         mp3_pattern = os.path.join(episode_dir, "*.mp3")
         mp3_files = sorted(glob.glob(mp3_pattern), key=lambda f: os.path.basename(f))
 
@@ -83,7 +94,7 @@ def sync_podcast_episodes_to_device() -> None:
                     f"[Podcast Sync] Failed to copy '{filename}' for episode '{episode.id}': {e}"
                 ) from e
 
-    state.podcasts.synced_episode_ids = list(episodes_to_sync_ids)
+    state.podcasts.synced_episode_ids = list(ready_episode_ids)
     save_sync_state(state, device_sdcard_path)
 
     print("[Podcast Sync] Sync completed")

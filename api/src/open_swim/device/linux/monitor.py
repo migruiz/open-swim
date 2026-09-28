@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import threading
 import time
 from typing import Any, Optional, Protocol
@@ -40,9 +41,12 @@ class LinuxDeviceMonitor:
         self.on_connected = on_connected
         self.on_disconnected = on_disconnected
         self.connected = False
+        self.mounted = False
         self.current_dev: Optional[str] = None
         self._monitor_thread: Optional[threading.Thread] = None
         self._stop_event: Optional[threading.Event] = None
+        # Serializes mount/unmount between the monitor thread and the sync worker.
+        self._mount_lock = threading.Lock()
 
     def _list_block_devices(self) -> list[str]:
         """Returns a list of block devices like sda1, sdb1, etc."""
@@ -107,16 +111,50 @@ class LinuxDeviceMonitor:
                 break
 
         if found_dev and not self.connected:
-            # Device plugged in
-            mount_point = config.device_sd_path
-            if mount_volume(found_dev, mount_point):
-                self.connected = True
-                self.current_dev = found_dev
-                self.on_connected(self, device=found_dev, mount_point=mount_point)
+            # Device plugged in. It is only mounted while a sync copies to it
+            # (ensure_mounted/release), so it is safe to unplug the rest of the time.
+            self.connected = True
+            self.current_dev = found_dev
+            self.on_connected(self, device=found_dev, mount_point=config.device_sd_path)
 
         if self.connected and (not found_dev):
             # Device unplugged
-            unmount_volume(config.device_sd_path)
-            self.connected = False
-            self.current_dev = None
+            with self._mount_lock:
+                if self.mounted:
+                    unmount_volume(config.device_sd_path, lazy_fallback=True)
+                    self.mounted = False
+                self.connected = False
+                self.current_dev = None
             self.on_disconnected(self)
+
+    def ensure_mounted(self) -> bool:
+        """Mount the connected device for copying. Returns True when it is mounted."""
+        mount_point = config.device_sd_path
+        with self._mount_lock:
+            if not self.connected or self.current_dev is None:
+                return False
+            if self.mounted and os.path.ismount(mount_point):
+                return True
+            if not mount_volume(self.current_dev, mount_point):
+                return False
+            # Guard against copying into the bare mount-point folder if mount
+            # reported success without actually mounting anything.
+            self.mounted = os.path.ismount(mount_point)
+            return self.mounted
+
+    def release(self) -> bool:
+        """Flush pending writes and unmount so the device can be unplugged safely.
+
+        Returns True when the device is connected and no longer mounted.
+        """
+        with self._mount_lock:
+            if not self.connected:
+                return False
+            if not self.mounted:
+                return True
+            if sys.platform != "win32":  # os.sync is POSIX-only; keeps mypy happy on Windows
+                os.sync()
+            if unmount_volume(config.device_sd_path):
+                self.mounted = False
+                return True
+            return False

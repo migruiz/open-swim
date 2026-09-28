@@ -5,13 +5,11 @@ import sys
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlparse
 
-from dotenv import load_dotenv
-
 from open_swim.config import config
 from open_swim.device import create_device_monitor
 from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
 from open_swim.media.podcast import store as podcast_store
-from open_swim.sync import enqueue_sync
+from open_swim.sync import enqueue_sync, enqueue_sync_after_quiet_period, start_periodic_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
 from open_swim.media.youtube.playlists import fetch_playlist_information
 from open_swim.messaging.models import (
@@ -22,8 +20,6 @@ from open_swim.messaging.models import (
 from open_swim.messaging.mqtt import MqttClient
 from open_swim.messaging.progress import MqttProgressReporter, set_progress_reporter
 
-
-load_dotenv()
 
 # Module-level instances for access by callbacks
 _device_monitor = None
@@ -53,6 +49,7 @@ def run() -> None:
     )
 
     _device_monitor.start_monitoring()
+    start_periodic_sync()
 
     try:
         _mqtt_client.connect_and_listen()
@@ -80,8 +77,10 @@ def _on_mqtt_message(client: MqttClient, topic: str, message: Any) -> None:
     match topic:
         case "openswim/episodes_to_sync":
             update_episodes_to_sync(str(message))
+            enqueue_sync_after_quiet_period()
         case "openswim/playlists_to_sync":
             update_playlists_to_sync(str(message))
+            enqueue_sync_after_quiet_period()
         case "openswim/playlist-info/request":
             _handle_playlist_info_request(client=client, message=str(message))
         case "openswim/episodes-to-sync/request":
@@ -192,6 +191,19 @@ def _on_device_connected(monitor: Any, device: str, mount_point: str) -> None:
     enqueue_sync()
 
     _publish_device_status(status="connected", device=device, mount_point=mount_point)
+
+
+def release_device() -> None:
+    """Flush and unmount the device after a copy, then announce it is safe to unplug."""
+    if _device_monitor is None:
+        return
+    if _device_monitor.release():
+        print("[DEVICE] Device released; safe to unplug")
+        _publish_device_status(
+            status="safe_to_unplug", device=_device_monitor.current_dev
+        )
+    else:
+        print("[DEVICE] Device not released after sync")
 
 
 def _on_device_disconnected(monitor: Any) -> None:

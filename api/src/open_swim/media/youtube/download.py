@@ -4,6 +4,7 @@ import secrets
 import subprocess
 
 from open_swim.config import config
+from open_swim.media.youtube.ytdlp import run_ytdlp
 
 
 def download_audio(tmp_path: Path, video_id: str) -> str:
@@ -15,7 +16,6 @@ def download_audio(tmp_path: Path, video_id: str) -> str:
     output_path = tmp_path / f"{secrets.token_hex(16)}.mp3"
 
     command = [
-        config.ytdlp_path,
         "-x",
         "--audio-format",
         "mp3",
@@ -23,18 +23,20 @@ def download_audio(tmp_path: Path, video_id: str) -> str:
         "0",
         "-o",
         str(output_path),
-        video_url,
     ]
+
+    if config.ytdlp_player_client:
+        command += [
+            "--extractor-args",
+            f"youtube:player_client={config.ytdlp_player_client}",
+        ]
+
+    command.append(video_url)
 
     print(f"Downloading: {video_url}")
 
     try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
+        result = run_ytdlp(command, timeout=300)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError("Download timeout") from exc
 

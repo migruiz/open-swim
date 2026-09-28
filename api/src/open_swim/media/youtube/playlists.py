@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from open_swim.config import config
+from open_swim.media.youtube.ytdlp import run_ytdlp
 
 
 class YoutubeVideo(BaseModel):
@@ -20,6 +21,15 @@ class PlaylistInfo(BaseModel):
     uploader_id: Optional[str] = None
     playlist_count: int = Field(default=0, alias="_playlist_count")
     videos: List[YoutubeVideo] = Field(default_factory=list)
+
+
+def videos_to_sync(playlist: PlaylistInfo) -> List[YoutubeVideo]:
+    """The newest PLAYLIST_SYNC_LIMIT videos, newest first.
+
+    YouTube lists a playlist oldest-added first. Both the library download and the
+    device copy use this, so the library never fetches videos the device won't get.
+    """
+    return list(reversed(playlist.videos))[: config.playlist_sync_limit]
 
 
 def fetch_playlist_information(playlist_url: str, playlist_title: str) -> PlaylistInfo:
@@ -39,13 +49,8 @@ def fetch_playlist_information(playlist_url: str, playlist_title: str) -> Playli
 
     try:
         print(f"Extracting playlist {playlist_title} info from URL: {playlist_url}")
-        command = [config.ytdlp_path, "--dump-single-json", "--flat-playlist", playlist_url]
-
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=60,
+        result = run_ytdlp(
+            ["--dump-single-json", "--flat-playlist", playlist_url], timeout=60
         )
 
         stdout = result.stdout
