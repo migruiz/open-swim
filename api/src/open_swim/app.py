@@ -24,6 +24,8 @@ from open_swim.messaging.progress import MqttProgressReporter, set_progress_repo
 # Module-level instances for access by callbacks
 _device_monitor = None
 _mqtt_client: MqttClient | None = None
+# Last player status, republished on every MQTT (re)connect.
+_last_device_status: tuple[str, str | None, str | None] = ("disconnected", None, None)
 
 
 def get_device_monitor() -> Optional[Any]:
@@ -68,6 +70,11 @@ def _on_mqtt_connected(client: MqttClient) -> None:
     client.subscribe("openswim/playlist-info/request")
     client.subscribe("openswim/episodes-to-sync/request")
     client.subscribe("openswim/playlists-to-sync/request")
+    # The retained status may be stale (e.g. left by another machine that ran
+    # open-swim), or a change may have happened while disconnected; replace it
+    # with this instance's current view.
+    status, device, mount_point = _last_device_status
+    _publish_device_status(status=status, device=device, mount_point=mount_point)
     enqueue_sync()
 
 
@@ -216,6 +223,8 @@ def _publish_device_status(
     status: str, device: str | None = None, mount_point: str | None = None
 ) -> None:
     """Publish device status change to MQTT."""
+    global _last_device_status
+    _last_device_status = (status, device, mount_point)
     if _mqtt_client is None or _mqtt_client.client is None:
         print("[MQTT] Skipping device status publish; client not connected yet.")
         return
