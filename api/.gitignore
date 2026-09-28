@@ -2,3 +2,4 @@ src/open_swim/__pycache__/
 dockerhub_credentials.txt
 src/open_swim.egg-info/
 .env
+portainer_token.txt
