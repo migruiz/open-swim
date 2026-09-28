@@ -24,6 +24,8 @@ services:
       - OPEN_SWIM_SD_PATH=/mnt/openswim
       # Delete library files that are no longer selected; the SD card is small.
       - LIBRARY_PRUNE=true
+      # The app sends picks only on Submit, so start syncing soon after.
+      - SELECTION_SYNC_DELAY_SECONDS=15
       # Leave YTDLP_PLAYER_CLIENT unset: with deno in the image the default
       # client works, while mweb needs a PO token and finds no formats.
     extra_hosts:

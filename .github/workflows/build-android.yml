@@ -47,7 +47,14 @@ jobs:
 
       - name: Build APK
         working-directory: client
-        run: flutter build apk --release
+        # Version the APK from the tag (v1.2.3 -> 1.2.3) so the in-app update
+        # checker can tell releases apart; pubspec's version is only a fallback.
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            flutter build apk --release --build-name="${GITHUB_REF_NAME#v}" --build-number="${{ github.run_number }}"
+          else
+            flutter build apk --release --build-number="${{ github.run_number }}"
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

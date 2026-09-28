@@ -1,6 +1,6 @@
 # App: confirm podcast picks with a Submit button
 
-Status: **not started**. Noted on 2026-09-28 during the Raspberry Pi sync work, to pick up in a separate app session.
+Status: **done** (2026-09-28). Picks now live in `SelectionController`; edits are sent with a Submit button, confirmed by the Pi, and the app shows player status and the last sync. The notes below are kept for context.
 
 ## Problem
 

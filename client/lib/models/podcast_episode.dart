@@ -1,18 +1,20 @@
+/// A podcast episode, either from the RSS feed or from the Pi's saved picks.
+///
+/// Whether an episode is picked is not stored here; see [SelectionController].
+/// Keeping it off the episode means reloading the feed can never clear picks.
 class PodcastEpisode {
   final String id;
   final String title;
   final DateTime published;
   final int durationSeconds;
   final String mediaUrl;
-  bool isSelected;
 
-  PodcastEpisode({
+  const PodcastEpisode({
     required this.id,
     required this.title,
     required this.published,
     required this.durationSeconds,
     required this.mediaUrl,
-    this.isSelected = false,
   });
 
   /// Parse from cached JSON
@@ -27,15 +29,14 @@ class PodcastEpisode {
     );
   }
 
-  /// Parse from API sync response
+  /// Parse an entry of the Pi's episodes-to-sync list.
   factory PodcastEpisode.fromSyncJson(Map<String, dynamic> json) {
     return PodcastEpisode(
       id: json['id'] as String,
-      title: json['title'] as String,
-      published: DateTime.parse(json['date'] as String),
+      title: json['title'] as String? ?? 'Episode',
+      published: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
       durationSeconds: 0,
-      mediaUrl: json['download_url'] as String,
-      isSelected: true,
+      mediaUrl: json['download_url'] as String? ?? '',
     );
   }
 

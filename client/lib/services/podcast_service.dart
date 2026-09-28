@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xml/xml.dart';
@@ -52,7 +53,7 @@ class PodcastService {
         _lastRefreshedController.add(_lastRefreshed);
       }
     } catch (e) {
-      print('Error loading from cache: $e');
+      debugPrint('Error loading from cache: $e');
     }
   }
 
@@ -70,7 +71,7 @@ class PodcastService {
       _lastRefreshed = now;
       _lastRefreshedController.add(_lastRefreshed);
     } catch (e) {
-      print('Error saving to cache: $e');
+      debugPrint('Error saving to cache: $e');
     }
   }
 
@@ -79,7 +80,7 @@ class PodcastService {
     _errorController.add(null);
 
     try {
-      print('Fetching podcast RSS feed: $_feedUrl');
+      debugPrint('Fetching podcast RSS feed: $_feedUrl');
       final response = await http.get(Uri.parse(_feedUrl));
 
       if (response.statusCode != 200) {
@@ -110,7 +111,7 @@ class PodcastService {
             mediaUrl: mediaUrl,
           ));
         } catch (e) {
-          print('Error parsing RSS item: $e');
+          debugPrint('Error parsing RSS item: $e');
         }
       }
 
@@ -120,7 +121,7 @@ class PodcastService {
 
       await _saveToCache(episodes);
     } catch (e) {
-      print('Error fetching episodes: $e');
+      debugPrint('Error fetching episodes: $e');
       _errorController.add('Failed to load episodes: $e');
       _loadingController.add(false);
     }
@@ -161,28 +162,10 @@ class PodcastService {
 
       return DateTime.utc(year, month, day, hour, minute, second);
     } catch (e) {
-      print('Error parsing date "$date": $e');
+      debugPrint('Error parsing date "$date": $e');
       return DateTime.now();
     }
   }
-
-  void updateSelection(String episodeId, bool isSelected) {
-    final index = _cachedEpisodes.indexWhere((e) => e.id == episodeId);
-    if (index != -1) {
-      _cachedEpisodes[index].isSelected = isSelected;
-      _episodesController.add(List.from(_cachedEpisodes));
-    }
-  }
-
-  void applySelectedIds(Set<String> selectedIds) {
-    for (final episode in _cachedEpisodes) {
-      episode.isSelected = selectedIds.contains(episode.id);
-    }
-    _episodesController.add(List.from(_cachedEpisodes));
-  }
-
-  List<PodcastEpisode> get selectedEpisodes =>
-      _cachedEpisodes.where((e) => e.isSelected).toList();
 
   void dispose() {
     _episodesController.close();

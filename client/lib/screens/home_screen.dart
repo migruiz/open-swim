@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../models/podcast_episode.dart';
+import '../models/server_status.dart';
 import '../services/mqtt_service.dart';
 import '../services/podcast_service.dart';
 import '../services/update_service.dart';
+import '../state/selection_controller.dart';
 import '../widgets/connection_status_bar.dart';
 import '../widgets/podcast_tab.dart';
+import '../widgets/status_card.dart';
 import '../widgets/youtube_tab.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,110 +19,126 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   final MqttService _mqttService = MqttService();
   final PodcastService _podcastService = PodcastService();
   final UpdateService _updateService = UpdateService();
+  final SelectionController _selection = SelectionController();
 
   AppMqttConnectionState _connectionState = AppMqttConnectionState.disconnected;
-  Set<String> _syncedEpisodeIds = {};
   DateTime? _lastRefreshed;
+  DeviceStatus _deviceStatus = DeviceStatus.unknown;
+  SyncProgress? _syncProgress;
+  Timer? _confirmTimeout;
 
   // Update state
   UpdateInfo? _updateInfo;
   bool _isDownloading = false;
   double _downloadProgress = 0;
 
-  // Dynamic playlists loaded from API
+  // Playlists the Pi syncs
   List<YouTubePlaylist> _playlists = [];
 
-  StreamSubscription<AppMqttConnectionState>? _connectionStateSubscription;
-  StreamSubscription<List<dynamic>>? _episodesToSyncSubscription;
-  StreamSubscription<List<dynamic>>? _playlistsToSyncSubscription;
-  StreamSubscription<DateTime?>? _lastRefreshedSubscription;
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
+
+  bool get _connected => _connectionState == AppMqttConnectionState.connected;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-    // Tabs: Podcast + YouTube playlists
-    _tabController = TabController(
-      length: 1 + _playlists.length,
-      vsync: this,
-    );
+    _tabController = TabController(length: 1 + _playlists.length, vsync: this);
 
-    // Listen to connection state changes
-    _connectionStateSubscription = _mqttService.connectionState.listen((state) {
-      setState(() {
-        _connectionState = state;
-      });
+    _subscriptions.addAll([
+      _mqttService.connectionState.listen((state) {
+        setState(() => _connectionState = state);
+        if (state == AppMqttConnectionState.connected) _requestServerState();
+      }),
+      _mqttService.playlistsToSyncResponse.listen(_onPlaylists),
+      _mqttService.episodesToSyncResponse.listen(_onEpisodesToSync),
+      _mqttService.deviceStatus.listen((status) {
+        if (mounted) setState(() => _deviceStatus = status);
+      }),
+      _mqttService.syncProgress.listen((progress) {
+        if (mounted) setState(() => _syncProgress = progress);
+      }),
+      _podcastService.lastRefreshedStream.listen((timestamp) {
+        if (mounted) setState(() => _lastRefreshed = timestamp);
+      }),
+    ]);
 
-      // On connect, request current sync state
-      if (state == AppMqttConnectionState.connected) {
-        _mqttService.requestEpisodesToSync();
-        _mqttService.requestPlaylistsToSync();
-      }
-    });
-
-    // Listen to playlists-to-sync responses
-    _playlistsToSyncSubscription =
-        _mqttService.playlistsToSyncResponse.listen((playlists) {
-      final newPlaylists = <YouTubePlaylist>[];
-      for (final pl in playlists) {
-        if (pl is Map<String, dynamic> && pl['id'] != null && pl['title'] != null) {
-          newPlaylists.add(YouTubePlaylist(
-            id: pl['id'] as String,
-            title: pl['title'] as String,
-          ));
-        }
-      }
-      _updatePlaylists(newPlaylists);
-    });
-
-    // Listen to episodes-to-sync responses
-    _episodesToSyncSubscription =
-        _mqttService.episodesToSyncResponse.listen((episodes) {
-      final ids = <String>{};
-      for (final ep in episodes) {
-        if (ep is Map<String, dynamic> && ep['id'] != null) {
-          ids.add(ep['id'] as String);
-        }
-      }
-      setState(() {
-        _syncedEpisodeIds = ids;
-      });
-      _podcastService.applySelectedIds(ids);
-    });
-
-    // Listen to last refreshed timestamp changes
-    _lastRefreshedSubscription =
-        _podcastService.lastRefreshedStream.listen((timestamp) {
-      if (mounted) {
-        setState(() {
-          _lastRefreshed = timestamp;
-        });
-      }
-    });
-
-    // Load cached data first, then connect
     _podcastService.loadFromCache().then((_) {
-      _lastRefreshed = _podcastService.lastRefreshed;
+      if (mounted) setState(() => _lastRefreshed = _podcastService.lastRefreshed);
     });
 
-    // Initial connection
     _mqttService.connect();
-
-    // Check for updates
     _checkForUpdates();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    // Back from the background: the socket may have died silently, and the
+    // Pi's state may have moved on overnight.
+    if (_mqttService.isConnected) {
+      _requestServerState();
+    } else {
+      _mqttService.reconnect();
+    }
+  }
+
+  void _requestServerState() {
+    _mqttService.requestEpisodesToSync();
+    _mqttService.requestPlaylistsToSync();
+  }
+
+  void _onEpisodesToSync(List<dynamic> episodes) {
+    final confirmed = _selection.applyServerList(episodes);
+    if (confirmed) {
+      _confirmTimeout?.cancel();
+      _showSnack('Saved on the Pi. It starts downloading shortly.');
+    }
+  }
+
+  void _onPlaylists(List<dynamic> playlists) {
+    final newPlaylists = <YouTubePlaylist>[
+      for (final pl in playlists)
+        if (pl is Map<String, dynamic> && pl['id'] is String && pl['title'] is String)
+          YouTubePlaylist(id: pl['id'] as String, title: pl['title'] as String),
+    ];
+    _updatePlaylists(newPlaylists);
+  }
+
+  void _submit() {
+    final payload = json.encode(
+      _selection.payload(_podcastService.cachedEpisodes).map((e) => e.toSyncJson()).toList(),
+    );
+    if (!_mqttService.publishMessage(Topics.episodesToSync, payload)) {
+      _showSnack('Not connected. Nothing was sent.');
+      return;
+    }
+    _selection.submitted();
+    // Ask for the saved list back; its arrival confirms the Pi got the picks.
+    _mqttService.requestEpisodesToSync();
+    _confirmTimeout?.cancel();
+    _confirmTimeout = Timer(const Duration(seconds: 15), () {
+      if (!_selection.awaitingConfirmation) return;
+      _selection.confirmationTimedOut();
+      _showSnack('The Pi did not confirm. It may be offline; your changes are kept, try again later.');
+    });
+  }
+
+  void _showSnack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   Future<void> _checkForUpdates() async {
     final updateInfo = await _updateService.checkForUpdate();
     if (updateInfo != null && mounted) {
-      setState(() {
-        _updateInfo = updateInfo;
-      });
+      setState(() => _updateInfo = updateInfo);
     }
   }
 
@@ -135,40 +153,33 @@ class _HomeScreenState extends State<HomeScreen>
     await _updateService.downloadAndInstall(
       _updateInfo!.downloadUrl,
       onProgress: (progress) {
-        if (mounted) {
-          setState(() {
-            _downloadProgress = progress;
-          });
-        }
+        if (mounted) setState(() => _downloadProgress = progress);
       },
     );
 
-    if (mounted) {
-      setState(() {
-        _isDownloading = false;
-      });
-    }
+    if (mounted) setState(() => _isDownloading = false);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _confirmTimeout?.cancel();
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
     _tabController.dispose();
-    _connectionStateSubscription?.cancel();
-    _episodesToSyncSubscription?.cancel();
-    _playlistsToSyncSubscription?.cancel();
-    _lastRefreshedSubscription?.cancel();
     _mqttService.dispose();
     _podcastService.dispose();
+    _selection.dispose();
     super.dispose();
   }
 
   void _updatePlaylists(List<YouTubePlaylist> newPlaylists) {
     if (!mounted) return;
 
-    // Check if playlists actually changed
-    final oldIds = _playlists.map((p) => p.id).toSet();
-    final newIds = newPlaylists.map((p) => p.id).toSet();
-    if (oldIds.length == newIds.length && oldIds.containsAll(newIds)) return;
+    final oldIds = _playlists.map((p) => p.id).toList();
+    final newIds = newPlaylists.map((p) => p.id).toList();
+    if (oldIds.length == newIds.length && oldIds.every(newIds.contains)) return;
 
     final oldController = _tabController;
     final oldIndex = oldController.index;
@@ -182,41 +193,12 @@ class _HomeScreenState extends State<HomeScreen>
       );
     });
 
-    // Dispose old controller after the frame completes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      oldController.dispose();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => oldController.dispose());
   }
 
   Future<void> _refreshAll() async {
+    if (_connected) _requestServerState();
     await _podcastService.fetchEpisodes();
-    _mqttService.requestEpisodesToSync();
-  }
-
-  void _onEpisodeToggled(PodcastEpisode episode) {
-    // Toggle the selection
-    final newSelected = !episode.isSelected;
-    _podcastService.updateSelection(episode.id, newSelected);
-
-    // Update the synced IDs
-    setState(() {
-      if (newSelected) {
-        _syncedEpisodeIds.add(episode.id);
-      } else {
-        _syncedEpisodeIds.remove(episode.id);
-      }
-    });
-
-    // Build and publish the new sync list
-    _publishSyncList();
-  }
-
-  void _publishSyncList() {
-    final selectedEpisodes = _podcastService.selectedEpisodes;
-    final payload = json.encode(
-      selectedEpisodes.map((e) => e.toSyncJson()).toList(),
-    );
-    _mqttService.publishMessage('openswim/episodes_to_sync', payload);
   }
 
   Widget _buildUpdateBanner() {
@@ -248,10 +230,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(width: 8),
           if (!_isDownloading)
-            ElevatedButton(
-              onPressed: _downloadUpdate,
-              child: const Text('Update'),
-            )
+            ElevatedButton(onPressed: _downloadUpdate, child: const Text('Update'))
           else
             Text('${(_downloadProgress * 100).toInt()}%'),
         ],
@@ -286,18 +265,25 @@ class _HomeScreenState extends State<HomeScreen>
       body: Column(
         children: [
           _buildUpdateBanner(),
+          StatusCard(device: _deviceStatus, progress: _syncProgress),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
                 PodcastTab(
                   podcastService: _podcastService,
-                  syncedEpisodeIds: _syncedEpisodeIds,
-                  onEpisodeToggled: _onEpisodeToggled,
+                  selection: _selection,
+                  connected: _connected,
                   onRefresh: _refreshAll,
+                  onSubmit: _submit,
                   lastRefreshed: _lastRefreshed,
                 ),
-                ..._playlists.map((p) => YouTubeTab(playlist: p)),
+                ..._playlists.map((p) => YouTubeTab(
+                      key: ValueKey(p.id),
+                      playlist: p,
+                      mqttService: _mqttService,
+                      connected: _connected,
+                    )),
               ],
             ),
           ),

@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 
 /// Configuration for GitHub repository
-const String githubOwner = 'migruiz'; // TODO: Replace with your GitHub username
-const String githubRepo = 'open-swim'; // TODO: Replace with your repo name if different
+const String githubOwner = 'migruiz';
+const String githubRepo = 'open-swim';
 
 class UpdateInfo {
   final String version;
@@ -46,7 +47,7 @@ class UpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      if (_isNewerVersion(latestVersion, currentVersion)) {
+      if (isNewerVersion(latestVersion, currentVersion)) {
         // Find APK asset
         final assets = data['assets'] as List;
         final apkAsset = assets.firstWhere(
@@ -67,15 +68,22 @@ class UpdateService {
 
       return null;
     } catch (e) {
-      print('Error checking for updates: $e');
+      debugPrint('Error checking for updates: $e');
       return null;
     }
   }
 
   /// Compare version strings (e.g., "1.2.3" > "1.2.0")
-  bool _isNewerVersion(String latest, String current) {
-    final latestParts = latest.split('.').map(int.parse).toList();
-    final currentParts = current.split('.').map(int.parse).toList();
+  @visibleForTesting
+  static bool isNewerVersion(String latest, String current) {
+    List<int> parts(String v) => v
+        .split('+')
+        .first
+        .split('.')
+        .map((p) => int.tryParse(p.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0)
+        .toList();
+    final latestParts = parts(latest);
+    final currentParts = parts(current);
 
     for (int i = 0; i < latestParts.length && i < currentParts.length; i++) {
       if (latestParts[i] > currentParts[i]) return true;
@@ -120,7 +128,7 @@ class UpdateService {
       final result = await OpenFilex.open(file.path);
       return result.type == ResultType.done;
     } catch (e) {
-      print('Error downloading update: $e');
+      debugPrint('Error downloading update: $e');
       return false;
     }
   }

@@ -24,7 +24,9 @@ class MqttProgressReporter:
     def report_progress(self, message: SyncProgressMessage) -> None:
         try:
             payload = message.model_dump_json()
-            self._mqtt_client.publish("openswim/sync/progress", payload, qos=0, retain=False)
+            # Retained so the app shows the last sync's outcome when it opens,
+            # e.g. the overnight sync the next morning.
+            self._mqtt_client.publish("openswim/sync/progress", payload, qos=0, retain=True)
         except Exception as exc:  # pragma: no cover - best effort only
             print(f"[MQTT] Failed to publish progress: {exc}")
 

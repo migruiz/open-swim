@@ -3,70 +3,40 @@ import '../models/podcast_episode.dart';
 
 class EpisodeTile extends StatelessWidget {
   final PodcastEpisode episode;
-  final bool isSyncedOnly;
-  final ValueChanged<bool?> onChanged;
+  final bool selected;
+
+  /// False until the Pi's picks have arrived; see [SelectionController.loaded].
+  final bool enabled;
+  final VoidCallback onToggle;
 
   const EpisodeTile({
     super.key,
     required this.episode,
-    required this.onChanged,
-    this.isSyncedOnly = false,
+    required this.selected,
+    required this.enabled,
+    required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final grey = Colors.grey.shade600;
     return CheckboxListTile(
-      value: episode.isSelected,
-      onChanged: onChanged,
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              episode.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          if (isSyncedOnly)
-            Container(
-              margin: const EdgeInsets.only(left: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Synced',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.blue.shade700,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-        ],
+      value: selected,
+      onChanged: enabled ? (_) => onToggle() : null,
+      title: Text(
+        episode.title,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 14),
       ),
       subtitle: Row(
         children: [
-          Text(
-            episode.formattedDate,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
+          Text(episode.formattedDate, style: TextStyle(fontSize: 12, color: grey)),
           if (episode.durationSeconds > 0) ...[
             const SizedBox(width: 8),
-            Icon(Icons.timer_outlined, size: 12, color: Colors.grey.shade600),
+            Icon(Icons.timer_outlined, size: 12, color: grey),
             const SizedBox(width: 2),
-            Text(
-              episode.formattedDuration,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
+            Text(episode.formattedDuration, style: TextStyle(fontSize: 12, color: grey)),
           ],
         ],
       ),

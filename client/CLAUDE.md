@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Flutter client for **Open Swim** - a personal app to control what podcast episodes and YouTube playlists get synced to an MP3 player. The syncing logic is handled by the API (see `../api/CLAUDE.md`). This client sends sync requests via MQTT and displays logs/status from the API.
 
 **Key Features:**
-- Send podcast episodes to sync (JSON payload to MQTT)
-- Send YouTube playlists to sync (JSON payload to MQTT)
-- Display logs from the API
-- Stable MQTT connection with auto-reconnect
+- Pick podcast episodes for the player and Submit them to the Pi
+- Show which videos of each synced YouTube playlist go on the player
+- Show the player's state (plugged in / safe to unplug) and the last sync's outcome
+- Stable MQTT connection with auto-reconnect and dead-connection detection
 
 ## Common Commands
 
@@ -79,12 +79,24 @@ _mqttService.reconnect();
 
 ## MQTT Topics
 
+Constants live in `Topics` in `lib/services/mqtt_service.dart`; the server side is `api/src/open_swim/app.py`.
+
 | Topic | Direction | Payload |
 |-------|-----------|---------|
-| `openswim/episodes_to_sync` | Client → API | `[{id, date, title, download_url}, ...]` |
-| `openswim/playlists_to_sync` | Client → API | `[{id, title}, ...]` |
-| `openswim/logs` | API → Client | `{source, level, message, timestamp}` |
-| `openswim/device/status` | Bidirectional | Status messages |
+| `openswim/episodes_to_sync` | Client → Pi | Full list `[{id, date, title, download_url}, ...]`, sent only on Submit |
+| `openswim/episodes-to-sync/request` → `/response` | Client ↔ Pi | Pi's saved picks (same shape); also used to confirm a Submit |
+| `openswim/playlists-to-sync/request` → `/response` | Client ↔ Pi | `[{id, title}, ...]` playlists the Pi syncs (one tab each) |
+| `openswim/playlist-info/request` → `/response` | Client ↔ Pi | `{playlist_id}` → `{success, playlist_id, title, videos: [{id, title}], error}` (oldest first) |
+| `openswim/device/status` | Pi → Client (retained) | `{status: connected\|safe_to_unplug\|disconnected, device, timestamp}` |
+| `openswim/sync/progress` | Pi → Client (retained) | `{stages: [{name, label, status, error}], timestamp}` |
+
+## Podcast picks
+
+`SelectionController` (`lib/state/`) owns the picks: the Pi's saved list plus unsent edits. Episodes from the RSS feed carry no selection state, so reloading the feed can't clear picks. Ticking is disabled until the Pi's list has arrived, edits are sent only with Submit (disabled while disconnected), and a Submit counts as saved only when the Pi's list comes back matching.
+
+## Releases
+
+Push a `vX.Y.Z` tag: `.github/workflows/build-android.yml` builds a signed APK versioned from the tag and attaches it to a GitHub release, which the in-app update banner offers. Keep `version:` in `pubspec.yaml` in step for local builds.
 
 ## Implementation Modules
 
