@@ -3,20 +3,30 @@
 #
 # The standalone yt-dlp binary lives at $YTDLP_DIR (a Docker volume), so updates
 # survive container restarts, recreation, and image rebuilds. We download it on
-# run, update on start when it's older than the interval, and refresh it every
-# YTDLP_UPDATE_INTERVAL_DAYS while the app runs. The app is pointed at it via
-# YTDLP_PATH.
+# first run, update it on every start, and again every day at YTDLP_UPDATE_TIME
+# (local time; mount /etc/localtime to use the host's zone) while the app runs.
+# The app additionally updates and retries when a download fails
+# (media/youtube/ytdlp.py). The app is pointed at it via YTDLP_PATH.
 set -eu
 
 YTDLP_DIR="${YTDLP_DIR:-/opt/ytdlp}"
 YTDLP_BIN="${YTDLP_DIR}/yt-dlp"
-INTERVAL_DAYS="${YTDLP_UPDATE_INTERVAL_DAYS:-7}"
-INTERVAL_SECS=$(( INTERVAL_DAYS * 86400 ))
+# nightly is what yt-dlp recommends for YouTube: fixes land there days before stable.
+CHANNEL="${YTDLP_UPDATE_CHANNEL:-nightly}"
+UPDATE_TIME="${YTDLP_UPDATE_TIME:-00:00}"
 
 pick_asset() {
   case "$(uname -m)" in
     aarch64|arm64)  echo "yt-dlp_linux_aarch64" ;;
     *)              echo "" ;;
+  esac
+}
+
+release_repo() {
+  case "$CHANNEL" in
+    stable)  echo "yt-dlp/yt-dlp" ;;
+    master)  echo "yt-dlp/yt-dlp-master-builds" ;;
+    *)       echo "yt-dlp/yt-dlp-nightly-builds" ;;
   esac
 }
 
@@ -26,7 +36,7 @@ download_ytdlp() {
     echo "[ytdlp] Unknown architecture $(uname -m); cannot fetch standalone binary" >&2
     return 1
   fi
-  url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/${asset}"
+  url="https://github.com/$(release_repo)/releases/latest/download/${asset}"
   echo "[ytdlp] Downloading ${url}"
   tmp="${YTDLP_BIN}.tmp"
   if curl -fSL --retry 3 --retry-delay 2 -o "$tmp" "$url"; then
@@ -43,16 +53,17 @@ download_ytdlp() {
 }
 
 self_update() {
-  echo "[ytdlp] Checking for update (current $("$YTDLP_BIN" --version 2>/dev/null || echo unknown))..."
-  "$YTDLP_BIN" -U 2>&1 || echo "[ytdlp] Self-update failed; keeping current version" >&2
+  echo "[ytdlp] $(date '+%F %T') Checking for update on ${CHANNEL} (current $("$YTDLP_BIN" --version 2>/dev/null || echo unknown))..."
+  "$YTDLP_BIN" --update-to "$CHANNEL" 2>&1 || echo "[ytdlp] Self-update failed; keeping current version" >&2
 }
 
-file_age_secs() {
-  if [ -f "$1" ]; then
-    echo $(( $(date +%s) - $(date -r "$1" +%s 2>/dev/null || echo 0) ))
-  else
-    echo 999999999
+seconds_until_next_update() {
+  now=$(date +%s)
+  next=$(date -d "today ${UPDATE_TIME}" +%s 2>/dev/null || echo 0)
+  if [ "$next" -le "$now" ]; then
+    next=$(date -d "tomorrow ${UPDATE_TIME}" +%s 2>/dev/null || echo $(( now + 86400 )))
   fi
+  echo $(( next - now ))
 }
 
 mkdir -p "$YTDLP_DIR"
@@ -68,21 +79,22 @@ if [ ! -x "$YTDLP_BIN" ]; then
   fi
 else
   export YTDLP_PATH="$YTDLP_BIN"
-  # Age-based update on start so frequently-restarted hosts still refresh every X days.
-  if [ "$(file_age_secs "$YTDLP_BIN")" -ge "$INTERVAL_SECS" ]; then
-    self_update
-  fi
+  # Always check on start: the update is one GitHub request, and a stale
+  # yt-dlp is the most common reason downloads stop working.
+  self_update
 fi
 
-# Background refresher for long-running containers.
+# Daily refresher for long-running containers.
 if [ -x "$YTDLP_BIN" ]; then
   (
     while true; do
-      sleep "$INTERVAL_SECS"
+      sleep "$(seconds_until_next_update)"
       self_update
+      # Step past the target minute so a fast update can't fire twice.
+      sleep 61
     done
   ) &
 fi
 
-echo "[ytdlp] Using YTDLP_PATH=${YTDLP_PATH:-unset} (update interval: ${INTERVAL_DAYS}d)"
+echo "[ytdlp] Using YTDLP_PATH=${YTDLP_PATH:-unset} (channel ${CHANNEL}, daily update at ${UPDATE_TIME})"
 exec "$@"

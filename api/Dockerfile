@@ -54,10 +54,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     # Add the venv to PATH so we can run 'open-swim' directly
     PATH="/app/.venv/bin:$PATH" \
-    # yt-dlp lives on a persistent volume and self-updates (see docker-entrypoint.sh)
+    # yt-dlp lives on a persistent volume and self-updates on start and daily
+    # (see docker-entrypoint.sh), and after a failed download (media/youtube/ytdlp.py).
     YTDLP_DIR="/opt/ytdlp" \
     YTDLP_PATH="/opt/ytdlp/yt-dlp" \
-    YTDLP_UPDATE_INTERVAL_DAYS="7"
+    YTDLP_UPDATE_CHANNEL="nightly" \
+    YTDLP_UPDATE_TIME="00:00"
 
 WORKDIR /app
 

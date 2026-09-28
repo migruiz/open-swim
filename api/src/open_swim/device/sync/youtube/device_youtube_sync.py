@@ -2,18 +2,14 @@ import os
 import shutil
 import hashlib
 import time
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 from open_swim.config import config
-
-# Maximum number of videos to sync per playlist (newest first)
-PLAYLIST_SYNC_LIMIT = int(os.environ.get("PLAYLIST_SYNC_LIMIT", "20"))
-
 from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.media.youtube.library import load_library
 from open_swim.device.sync.state import DevicePlaylistState, load_sync_state, save_sync_state
 from open_swim.media.youtube.models import YouTubeLibrary
-from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo
+from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, videos_to_sync
 
 
 def _reset_device_folder(path: str, attempts: int = 40, delay: float = 0.25) -> None:
@@ -50,6 +46,31 @@ def _reset_device_folder(path: str, attempts: int = 40, delay: float = 0.25) -> 
     raise RuntimeError(f"[Device Sync] Could not create folder '{path}': {last_exc}")
 
 
+def _videos_ready_in_library(
+    videos: List[YoutubeVideo], library_info: YouTubeLibrary
+) -> List[Tuple[YoutubeVideo, str]]:
+    """Videos whose normalized MP3 is in the library, paired with its path.
+
+    The device hash covers only these, so a video that finishes downloading after
+    a device sync changes the hash and is copied next time, instead of the
+    playlist being recorded as complete without it.
+    """
+    ready: List[Tuple[YoutubeVideo, str]] = []
+    for video in videos:
+        video_info = library_info.videos.get(video.id)
+        if video_info is None:
+            print(f"[Device Sync] Video {video.id} not found in library, skipping")
+            continue
+        if not video_info.mp3_path:
+            print(f"[Device Sync] No normalized MP3 for video {video.id} ({video.title}), skipping")
+            continue
+        if not os.path.exists(video_info.mp3_path):
+            print(f"[Device Sync] Normalized MP3 file does not exist: {video_info.mp3_path}, skipping")
+            continue
+        ready.append((video, video_info.mp3_path))
+    return ready
+
+
 def _calculate_playlist_hash(videos: List[YoutubeVideo]) -> str:
     """Calculate a unique hash based on video IDs in the copy order."""
     video_data = "".join([f"{idx}:{video.id}" for idx, video in enumerate(videos)])
@@ -66,10 +87,10 @@ def _sync_playlist_to_device(
 ) -> None:
     playlist_title = sanitize_playlist_title(playlist.title)
     playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
-    videos_in_desc_order = list(reversed(playlist.videos))[:PLAYLIST_SYNC_LIMIT]
+    ready_videos = _videos_ready_in_library(videos_to_sync(playlist), library_info)
 
     # Calculate current playlist hash
-    current_hash = _calculate_playlist_hash(videos_in_desc_order)
+    current_hash = _calculate_playlist_hash([video for video, _ in ready_videos])
 
     stored_state = sync_state.get(playlist.id)
     if stored_state and stored_state.playlist_hash == current_hash:
@@ -83,26 +104,12 @@ def _sync_playlist_to_device(
     print(f"[Device Sync] Created folder: {playlist_folder_path}")
 
     # Copy newest/last-added items first so files land on the device in descending order
-    for video_index, video in enumerate(videos_in_desc_order, start=1):
-        video_id = video.id
-
-        if video_id not in library_info.videos:
-            print(f"[Device Sync] Video {video_id} not found in library, skipping")
-            continue
-
-        video_info = library_info.videos[video_id]
-        if not video_info.mp3_path:
-            print(f"[Device Sync] No normalized MP3 for video {video_id} ({video.title}), skipping")
-            continue
-        if not os.path.exists(video_info.mp3_path):
-            print(f"[Device Sync] Normalized MP3 file does not exist: {video_info.mp3_path}, skipping")
-            continue
-
-        filename = os.path.basename(video_info.mp3_path)
+    for _, mp3_path in ready_videos:
+        filename = os.path.basename(mp3_path)
         destination_path = os.path.join(playlist_folder_path, filename)
 
         try:
-            shutil.copy2(video_info.mp3_path, destination_path)
+            shutil.copy2(mp3_path, destination_path)
             print(f"[Device Sync] Copied: {filename} -> {playlist_title}/")
         except Exception as e:
             raise RuntimeError(
@@ -115,7 +122,7 @@ def _sync_playlist_to_device(
         id=playlist.id,
         title=playlist_title,
         playlist_hash=current_hash,
-        video_count=len(videos_in_desc_order),
+        video_count=len(ready_videos),
     )
 
 

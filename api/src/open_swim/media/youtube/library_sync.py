@@ -12,7 +12,12 @@ from open_swim.media.youtube.library import (
 )
 from open_swim.media.youtube.models import PlaylistRequest, VideoStatus
 from open_swim.media.youtube.normalize import get_normalized_loudness_file
-from open_swim.media.youtube.playlists import PlaylistInfo, YoutubeVideo, fetch_playlist_information
+from open_swim.media.youtube.playlists import (
+    PlaylistInfo,
+    YoutubeVideo,
+    fetch_playlist_information,
+    videos_to_sync,
+)
 from open_swim.media.youtube.playlists_to_sync import load_playlists_to_sync
 
 
@@ -75,8 +80,9 @@ def _sync_video_to_library(
 
 
 def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
-    total_videos = len(playlist_info.videos)
-    for index, video in enumerate(playlist_info.videos, start=1):
+    videos = videos_to_sync(playlist_info)
+    total_videos = len(videos)
+    for index, video in enumerate(videos, start=1):
         try:
             _sync_video_to_library(
                 video=video,
@@ -87,7 +93,10 @@ def _sync_library_playlist(playlist_info: PlaylistInfo) -> None:
             )
         except Exception as e:
             print(f"[Error] Failed to sync video {video.title} - {video.id}: {str(e)}")
-    print(f"[Playlist] Extracted and processed {len(playlist_info.videos)} videos from playlist.")
+    print(
+        f"[Playlist] Processed the newest {total_videos} of "
+        f"{len(playlist_info.videos)} videos in the playlist."
+    )
 
 
 def sync_youtube_playlists_to_library(playlists_to_sync: List[PlaylistInfo]) -> None:

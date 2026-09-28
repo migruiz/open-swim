@@ -1,21 +1,31 @@
 version: '3.8'
 
+# Raspberry Pi stack (Portainer). Keep this file and the stack in sync.
 services:
   open-swim:
     image: migruiz/open-swim:latest
     container_name: open-swim
     restart: unless-stopped
+    # Needed to mount the player inside the container.
     privileged: true
-    devices:
-      - /dev:/dev
     volumes:
-      - /mnt/openswim:/mnt/openswim:shared
+      # A bind mount, not `devices:`, so a player plugged in after the
+      # container starts still shows up under /dev.
+      - /dev:/dev
+      # Downloaded library plus the saved playlist/episode selections.
+      - /home/pi/open_swim_library:/library
       # Persist the self-updating yt-dlp binary across restarts and rebuilds.
       - ytdlp-bin:/opt/ytdlp
+      # Host time zone, so the nightly yt-dlp update runs at local midnight.
+      - /etc/localtime:/etc/localtime:ro
     environment:
       - MQTT_BROKER_URI=mqtt://host.docker.internal:1883
-      # How often the background updater refreshes yt-dlp (days).
-      - YTDLP_UPDATE_INTERVAL_DAYS=7
+      # The player is mounted here only while a sync copies to it.
+      - OPEN_SWIM_SD_PATH=/mnt/openswim
+      # Delete library files that are no longer selected; the SD card is small.
+      - LIBRARY_PRUNE=true
+      # Leave YTDLP_PLAYER_CLIENT unset: with deno in the image the default
+      # client works, while mweb needs a PO token and finds no formats.
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

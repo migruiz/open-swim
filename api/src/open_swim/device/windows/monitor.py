@@ -150,3 +150,11 @@ class WindowsDeviceMonitor:
             self.connected = False
             self.current_dev = None
             self.on_disconnected(self)
+
+    def ensure_mounted(self) -> bool:
+        """Windows mounts removable drives itself; ready whenever connected."""
+        return self.connected
+
+    def release(self) -> bool:
+        """Not supported on Windows; eject the drive from Explorer."""
+        return False
