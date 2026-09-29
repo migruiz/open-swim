@@ -70,6 +70,7 @@ def _on_mqtt_connected(client: MqttClient) -> None:
     client.subscribe("openswim/playlist-info/request")
     client.subscribe("openswim/episodes-to-sync/request")
     client.subscribe("openswim/playlists-to-sync/request")
+    client.subscribe("openswim/sync/request")
     # The retained status may be stale (e.g. left by another machine that ran
     # open-swim), or a change may have happened while disconnected; replace it
     # with this instance's current view.
@@ -94,6 +95,10 @@ def _on_mqtt_message(client: MqttClient, topic: str, message: Any) -> None:
             _handle_episodes_to_sync_request(client=client)
         case "openswim/playlists-to-sync/request":
             _handle_playlists_to_sync_request(client=client)
+        case "openswim/sync/request":
+            # "Sync now" from the app, e.g. after adding videos on YouTube.
+            # Queued behind a running sync, and dropped if one is already waiting.
+            enqueue_sync()
         case _:
             print(f"[MQTT] Unhandled topic {topic}")
 

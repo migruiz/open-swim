@@ -21,7 +21,7 @@ Long-running MQTT worker that normalizes YouTube playlists and podcast episodes 
 
 **Runtime flow:** `app.py` starts a background device monitor and MQTT client, blocks in MQTT loop. On connect, subscribes to topics and enqueues initial sync.
 
-**Sync triggers:** MQTT (re)connect, device plugged in, every `SYNC_INTERVAL_HOURS`, and `SELECTION_SYNC_DELAY_SECONDS` after the last change to a selection topic (debounced so ticking episodes one by one starts one sync). Unplugged, a sync only downloads to the library; plugged in, it also copies to the device.
+**Sync triggers:** MQTT (re)connect, device plugged in, `openswim/sync/request` ("Sync now" in the app), every `SYNC_INTERVAL_HOURS`, and `SELECTION_SYNC_DELAY_SECONDS` after the last change to a selection topic (debounced so ticking episodes one by one starts one sync). Unplugged, a sync only downloads to the library; plugged in, it also copies to the device.
 
 **Threading model:** Single queue + daemon worker thread in `sync.py`. `enqueue_sync()` adds tasks, `_sync_worker()` processes serially to prevent overlapping downloads/device writes. At most one sync waits behind the running one; further triggers are dropped because the waiting one covers them.
 
@@ -51,6 +51,7 @@ Long-running MQTT worker that normalizes YouTube playlists and podcast episodes 
   - `openswim/episodes_to_sync` - JSON array of podcast episodes to sync
   - `openswim/playlists_to_sync` - JSON array of `{id, title}` for YouTube playlists
   - `openswim/playlist-info/request` - Request playlist metadata
+  - `openswim/sync/request` - "Sync now" from the app; queues a sync immediately (no debounce)
 - Publish:
   - `openswim/device/status` (retained) - `{status: "connected"|"safe_to_unplug"|"disconnected", device, mount_point, timestamp}`
   - `openswim/sync/progress` - Real-time sync progress with phase, status, and percentage

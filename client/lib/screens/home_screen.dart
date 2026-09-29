@@ -130,6 +130,14 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _syncNow() {
+    if (_mqttService.requestSync()) {
+      _showSnack('Sync requested. The Pi starts within seconds, or right after the current sync.');
+    } else {
+      _showSnack('Not connected. Nothing was sent.');
+    }
+  }
+
   void _showSnack(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -265,7 +273,11 @@ class _HomeScreenState extends State<HomeScreen>
       body: Column(
         children: [
           _buildUpdateBanner(),
-          StatusCard(device: _deviceStatus, progress: _syncProgress),
+          StatusCard(
+            device: _deviceStatus,
+            progress: _syncProgress,
+            onSyncNow: _connected ? _syncNow : null,
+          ),
           Expanded(
             child: TabBarView(
               controller: _tabController,

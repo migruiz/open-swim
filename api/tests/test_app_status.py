@@ -49,3 +49,18 @@ def test_connect_republishes_the_last_known_status(fake: FakeMqtt) -> None:
     status = _status(fake)
     assert status["status"] == "safe_to_unplug"
     assert status["device"] == "/dev/sda1"
+
+
+def test_sync_request_queues_a_sync(fake: FakeMqtt, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: List[int] = []
+    monkeypatch.setattr(app, "enqueue_sync", lambda: calls.append(1))
+
+    app._on_mqtt_message(fake, "openswim/sync/request", "")  # type: ignore[arg-type]
+
+    assert calls == [1]
+
+
+def test_connect_subscribes_to_sync_requests(fake: FakeMqtt) -> None:
+    app._on_mqtt_connected(fake)  # type: ignore[arg-type]
+
+    assert "openswim/sync/request" in fake.subscribed

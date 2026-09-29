@@ -18,7 +18,10 @@ class StatusCard extends StatelessWidget {
   final DeviceStatus device;
   final SyncProgress? progress;
 
-  const StatusCard({super.key, required this.device, this.progress});
+  /// "Sync now"; null disables the button (e.g. while disconnected).
+  final VoidCallback? onSyncNow;
+
+  const StatusCard({super.key, required this.device, this.progress, this.onSyncNow});
 
   (IconData, Color, String) _player() {
     switch (device.state) {
@@ -94,13 +97,24 @@ class StatusCard extends StatelessWidget {
       child: InkWell(
         onTap: progress == null ? null : () => _showDetails(context),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+          child: Row(
             children: [
-              _line(playerIcon, playerColor, playerText),
-              const SizedBox(height: 4),
-              _line(syncIcon, syncColor, syncText),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _line(playerIcon, playerColor, playerText),
+                    const SizedBox(height: 4),
+                    _line(syncIcon, syncColor, syncText),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.sync),
+                tooltip: 'Sync now',
+                onPressed: onSyncNow,
+              ),
             ],
           ),
         ),

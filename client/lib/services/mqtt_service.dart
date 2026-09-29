@@ -23,6 +23,7 @@ class Topics {
   static const playlistInfoResponse = 'openswim/playlist-info/response';
   static const deviceStatus = 'openswim/device/status';
   static const syncProgress = 'openswim/sync/progress';
+  static const syncRequest = 'openswim/sync/request';
 
   static const subscribed = [
     episodesToSyncResponse,
@@ -209,6 +210,9 @@ class MqttService {
   void requestEpisodesToSync() => publishMessage(Topics.episodesToSyncRequest, '');
 
   void requestPlaylistsToSync() => publishMessage(Topics.playlistsToSyncRequest, '');
+
+  /// Ask the Pi to sync now (e.g. after adding videos to a playlist on YouTube).
+  bool requestSync() => publishMessage(Topics.syncRequest, '');
 
   bool requestPlaylistInfo(String playlistId) => publishMessage(
         Topics.playlistInfoRequest,
