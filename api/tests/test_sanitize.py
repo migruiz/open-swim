@@ -28,8 +28,15 @@ class TestSanitizePlaylistTitle:
     def test_underscores_preserved(self) -> None:
         assert sanitize_playlist_title("My_Playlist") == "My_Playlist"
 
-    def test_unicode_letters_preserved(self) -> None:
-        assert sanitize_playlist_title("Música") == "Música"
+    def test_accents_become_plain_letters(self) -> None:
+        # The Pi's FAT mount rejects non-ASCII names.
+        assert sanitize_playlist_title("Música") == "Musica"
+
+    def test_superscript_becomes_plain_digit(self) -> None:
+        assert sanitize_playlist_title("Harness² Explained") == "Harness2_Explained"
+
+    def test_non_latin_title_falls_back_to_default(self) -> None:
+        assert sanitize_playlist_title("音楽") == "playlist"
 
     def test_numbers_preserved(self) -> None:
         assert sanitize_playlist_title("Top 100 Hits") == "Top_100_Hits"

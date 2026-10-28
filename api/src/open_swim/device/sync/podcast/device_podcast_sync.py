@@ -1,9 +1,9 @@
 import os
-import shutil
 import glob
 from typing import List, Set, Tuple
 
 from open_swim.config import config
+from open_swim.device.sync.files import copy_failures_message, copy_file_to_device, device_name
 from open_swim.device.sync.state import load_sync_state, save_sync_state
 from open_swim.media.podcast import store
 from open_swim.media.podcast.episodes_to_sync import load_episodes_to_sync
@@ -79,22 +79,31 @@ def sync_podcast_episodes_to_device() -> None:
     _delete_mp3_files(podcast_folder_path)
     sorted_episodes = sorted(ready_episodes, key=lambda item: item[0].date)
 
+    copied_episode_ids: List[str] = []
+    failures: List[str] = []
     for episode, episode_dir in sorted_episodes:
         mp3_pattern = os.path.join(episode_dir, "*.mp3")
         mp3_files = sorted(glob.glob(mp3_pattern), key=lambda f: os.path.basename(f))
 
-        for file_index, mp3_file in enumerate(mp3_files, start=1):
-            filename = os.path.basename(mp3_file)
+        episode_failed = False
+        for mp3_file in mp3_files:
+            filename = device_name(os.path.basename(mp3_file))
             destination_path = os.path.join(podcast_folder_path, filename)
             try:
-                shutil.copy2(mp3_file, destination_path)
+                copy_file_to_device(mp3_file, destination_path)
                 print(f"[Podcast Sync] Copied: {filename}")
             except Exception as e:
-                raise RuntimeError(
-                    f"[Podcast Sync] Failed to copy '{filename}' for episode '{episode.id}': {e}"
-                ) from e
+                # Carry on with the other segments and episodes.
+                print(f"[Podcast Sync] Failed to copy '{filename}' for episode '{episode.id}': {e}")
+                failures.append(f"'{filename}': {e}")
+                episode_failed = True
+        if not episode_failed:
+            copied_episode_ids.append(episode.id)
 
-    state.podcasts.synced_episode_ids = list(ready_episode_ids)
+    # Record only fully copied episodes, so a failed one is copied again next sync.
+    state.podcasts.synced_episode_ids = copied_episode_ids
     save_sync_state(state, device_sdcard_path)
 
+    if failures:
+        raise RuntimeError(copy_failures_message("[Podcast Sync]", failures))
     print("[Podcast Sync] Sync completed")

@@ -54,7 +54,9 @@ def _prepare_device_directories(playlists_to_sync: List[PlaylistInfo]) -> None:
             print(f"[Device Sync] Created playlist folder: {playlist_path}")
 
         existing = existing_playlists_by_id.get(playlist.id)
+        renamed = False
         if existing and existing.title != sanitized_title:
+            renamed = True
             old_path = os.path.join(sd_card_path, existing.title)
             if os.path.exists(old_path):
                 shutil.rmtree(old_path)
@@ -64,8 +66,10 @@ def _prepare_device_directories(playlists_to_sync: List[PlaylistInfo]) -> None:
             DevicePlaylistState(
                 id=playlist.id,
                 title=sanitized_title,
-                playlist_hash=getattr(existing, "playlist_hash", None),
-                video_count=getattr(existing, "video_count", None),
+                # A renamed playlist's folder starts empty: drop its hash so the
+                # videos are copied into it instead of being skipped as up to date.
+                playlist_hash=None if renamed else getattr(existing, "playlist_hash", None),
+                video_count=None if renamed else getattr(existing, "video_count", None),
             )
         )
 

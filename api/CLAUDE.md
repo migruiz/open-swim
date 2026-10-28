@@ -95,6 +95,7 @@ Ensure `yt-dlp`, `ffmpeg`, and optionally `piper` are installed and on PATH. The
 - On Windows, drives auto-mount to letters (e.g., `E:\`); on Linux, explicit mount to `OPEN_SWIM_SD_PATH` is performed.
 - Download-heavy steps (yt-dlp, ffmpeg, Piper) trigger significant network/CPU; avoid during code review.
 - Syncing to device wipes and recreates playlist folders before copying; use test media when experimenting.
+- Names written to the player are plain ASCII (`device_name()` in `device/sync/files.py`): the Pi kernel mounts FAT with `iocharset=ascii`, which rejects any other character with EINVAL. A failed copy is skipped, the rest still copy, and the playlist or episode is retried next sync.
 - Delete `info.json` files to clear cached library state.
 - Simulate MQTT by publishing to topics with JSON payloads.
 - YouTube playlist sync is limited to the newest `PLAYLIST_SYNC_LIMIT` (20) items, for both the library download and the device copy (`videos_to_sync()` in `media/youtube/playlists.py`).

@@ -5,6 +5,7 @@ import time
 from typing import List, Dict, Optional, Tuple
 
 from open_swim.config import config
+from open_swim.device.sync.files import copy_failures_message, copy_file_to_device, device_name
 from open_swim.device.sync.youtube.sanitize import sanitize_playlist_title
 from open_swim.media.youtube.library import load_library
 from open_swim.device.sync.state import DevicePlaylistState, load_sync_state, save_sync_state
@@ -84,7 +85,8 @@ def _sync_playlist_to_device(
     sync_state: Dict[str, DevicePlaylistState],
     current_index: int,
     total_count: int,
-) -> None:
+) -> List[str]:
+    """Copy one playlist to the device. Returns the copies that failed."""
     playlist_title = sanitize_playlist_title(playlist.title)
     playlist_folder_path = os.path.join(device_sdcard_path, playlist_title)
     ready_videos = _videos_ready_in_library(videos_to_sync(playlist), library_info)
@@ -95,7 +97,7 @@ def _sync_playlist_to_device(
     stored_state = sync_state.get(playlist.id)
     if stored_state and stored_state.playlist_hash == current_hash:
         print(f"[Device Sync] Playlist {playlist.id} ({playlist.title}) is already up to date on device. Skipping.")
-        return
+        return []
 
     print(f"[Device Sync] Processing playlist: {playlist_title}")
 
@@ -104,26 +106,33 @@ def _sync_playlist_to_device(
     print(f"[Device Sync] Created folder: {playlist_folder_path}")
 
     # Copy newest/last-added items first so files land on the device in descending order
+    failures: List[str] = []
     for _, mp3_path in ready_videos:
-        filename = os.path.basename(mp3_path)
+        filename = device_name(os.path.basename(mp3_path))
         destination_path = os.path.join(playlist_folder_path, filename)
 
         try:
-            shutil.copy2(mp3_path, destination_path)
+            copy_file_to_device(mp3_path, destination_path)
             print(f"[Device Sync] Copied: {filename} -> {playlist_title}/")
         except Exception as e:
-            raise RuntimeError(
-                f"[Device Sync] Failed to copy '{filename}' to playlist '{playlist_title}': {e}"
-            ) from e
+            # Carry on: the folder is already cleared, so stopping here would
+            # leave the player with only part of the playlist.
+            print(f"[Device Sync] Failed to copy '{filename}' to playlist '{playlist_title}': {e}")
+            failures.append(f"'{filename}' ({playlist_title}): {e}")
 
-    print(f"[Device Sync] Completed playlist: {playlist_title}")
+    if failures:
+        print(f"[Device Sync] Completed playlist {playlist_title} with {len(failures)} failed copies")
+    else:
+        print(f"[Device Sync] Completed playlist: {playlist_title}")
 
+    # No hash after a failed copy, so the next sync copies the playlist again.
     sync_state[playlist.id] = DevicePlaylistState(
         id=playlist.id,
         title=playlist_title,
-        playlist_hash=current_hash,
-        video_count=len(ready_videos),
+        playlist_hash=None if failures else current_hash,
+        video_count=len(ready_videos) - len(failures),
     )
+    return failures
 
 
 def sync_device_playlists_videos(play_lists: List[PlaylistInfo]) -> None:
@@ -142,8 +151,9 @@ def sync_device_playlists_videos(play_lists: List[PlaylistInfo]) -> None:
     sync_state = {p.id: p for p in state.playlists}
 
     total_playlists = len(play_lists)
+    failures: List[str] = []
     for index, playlist in enumerate(play_lists, start=1):
-        _sync_playlist_to_device(
+        failures += _sync_playlist_to_device(
             playlist,
             library_info,
             device_sdcard_path,
@@ -155,4 +165,6 @@ def sync_device_playlists_videos(play_lists: List[PlaylistInfo]) -> None:
     state.playlists = list(sync_state.values())
     save_sync_state(state=state, sd_card_path=device_sdcard_path)
 
+    if failures:
+        raise RuntimeError(copy_failures_message("[Device Sync]", failures))
     print("[Device Sync] Sync completed")
