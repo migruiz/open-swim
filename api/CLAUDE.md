@@ -100,5 +100,5 @@ Ensure `yt-dlp`, `ffmpeg`, and optionally `piper` are installed and on PATH. The
 - Delete `info.json` files to clear cached library state.
 - Simulate MQTT by publishing to topics with JSON payloads.
 - YouTube playlist sync is limited to the newest `PLAYLIST_SYNC_LIMIT` (20) items, for both the library download and the device copy (`videos_to_sync()` in `media/youtube/playlists.py`).
-- The player does not record what it plays: tested 2026-11-19, it writes no FAT last-opened dates and keeps no resume file on its disk. It remembers its place internally but loses it whenever it is plugged in, so the user tells the app which part to start from (`start_part`).
+- The player does not record what it plays: tested 2026-11-19, it writes no FAT last-opened dates and keeps no resume file on its disk. It remembers its place internally, but switching to another folder and back starts that folder at its first file. So the user tells the app which part they reached (`start_part`), and the Pi deletes the earlier parts so the folder's first file is that part. Unverified: whether deleting earlier files shifts a remembered position (if the player stores a track index rather than the file).
 - `uv run --extra dev pytest` runs the tests; `test_sanitize.py::test_special_characters_removed` is a known failure that predates the Pi sync work.

@@ -94,7 +94,7 @@ Constants live in `Topics` in `lib/services/mqtt_service.dart`; the server side 
 
 `SelectionController` (`lib/state/`) owns the picks: the Pi's saved list plus unsent edits. Episodes from the RSS feed carry no selection state, so reloading the feed can't clear picks. Ticking is disabled until the Pi's list has arrived, edits are sent only with Submit (disabled while disconnected), and a Submit counts as saved only when the Pi's list comes back matching.
 
-Each picked episode also has a start part ("Start at part 10 of 18", with − / +). The player keeps its place on its own but loses it whenever it is plugged in, and it records nothing the Pi can read, so the user sets the part they reached (each part begins with a spoken "10 of 18") and the Pi leaves the earlier parts off the player.
+Each picked episode also has a start part ("Start at part 10 of 18", with − / +). The player keeps its place on its own, but switching to another folder and back starts the podcast folder at its first file, and it records nothing the Pi can read, so the user sets the part they reached (each part begins with a spoken "10 of 18") and the Pi leaves the earlier parts off the player.
 
 ## Releases
 
