@@ -71,4 +71,28 @@ void main() {
     await tester.tap(find.text('Submit'));
     expect(submits, 0);
   });
+
+  testWidgets('a picked episode can be moved to a later part', (tester) async {
+    final selection = await pumpTab(tester, connected: true, onSubmit: () {});
+    selection.applyServerList([
+      {
+        'id': 'a',
+        'date': '2026-05-11T15:03:10.000Z',
+        'title': 'A',
+        'download_url': 'u',
+        'start_part': 2,
+        'part_count': 3,
+      },
+    ]);
+    await tester.pump();
+
+    expect(find.text('Start at part 2 of 3'), findsOneWidget);
+    await tester.tap(find.byTooltip('Later part'));
+    await tester.pump();
+
+    expect(find.text('Start at part 3 of 3'), findsOneWidget);
+    expect(find.text('1 unsent change'), findsOneWidget);
+    // Already at the last part: no further.
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.add)).onPressed, isNull);
+  });
 }

@@ -181,11 +181,15 @@ class _PodcastTabState extends State<PodcastTab> {
         final selection = widget.selection;
         final picked = selection.selectedEpisodes(_episodes);
 
-        Widget tile(PodcastEpisode episode) => EpisodeTile(
+        Widget tile(PodcastEpisode episode, {bool showParts = false}) => EpisodeTile(
               episode: episode,
               selected: selection.isSelected(episode.id),
               enabled: selection.loaded && !selection.awaitingConfirmation,
               onToggle: () => selection.toggle(episode.id),
+              startPart: selection.startPart(episode.id),
+              partCount: selection.partCount(episode.id),
+              onStartPartChanged:
+                  showParts ? (part) => selection.setStartPart(episode.id, part) : null,
             );
 
         final Widget body;
@@ -212,7 +216,7 @@ class _PodcastTabState extends State<PodcastTab> {
                       style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                     ),
                   ),
-            for (final episode in picked) () => tile(episode),
+            for (final episode in picked) () => tile(episode, showParts: true),
             () => const Divider(),
             () => _sectionHeader('ALL EPISODES'),
             for (final episode in _episodes) () => tile(episode),

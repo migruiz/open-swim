@@ -44,13 +44,14 @@ Long-running MQTT worker that normalizes YouTube playlists and podcast episodes 
 - `LIBRARY_PATH/youtube/playlists_to_sync.json` - Requested playlist IDs + titles
 - `LIBRARY_PATH/podcasts/info.json` - Processed podcast episodes
 - `LIBRARY_PATH/podcasts/episodes_to_sync.json` - Requested episodes
-- Device `sync_state.json` at the SD root - per-playlist SHA256 of the video IDs that were actually copied (only those ready in the library), plus the copied podcast episode IDs; a video or episode that finishes downloading later changes these and gets copied next sync
+- Device `sync_state.json` at the SD root - per-playlist SHA256 of the video IDs that were actually copied (only those ready in the library), plus the copied podcast episode IDs; a video that finishes downloading later changes the hash and gets copied next sync. The podcast copy compares the player's podcast folder (names and sizes) with the parts wanted: no difference means skip, only extra parts means delete them, anything else means wipe and copy again in order (cheap players often play in the order files were written, so additions are never appended out of order)
 
 **MQTT contract:**
 - Subscribe:
-  - `openswim/episodes_to_sync` - JSON array of podcast episodes to sync
+  - `openswim/episodes_to_sync` - JSON array of podcast episodes to sync: `{id, date, download_url, title, start_part?}`. `start_part` (default 1) is the part the user has reached; earlier parts are left off the player
   - `openswim/playlists_to_sync` - JSON array of `{id, title}` for YouTube playlists
   - `openswim/playlist-info/request` - Request playlist metadata
+  - `openswim/episodes-to-sync/request` - Request the saved picks; answered on `openswim/episodes-to-sync/response` with each episode plus `part_count` (null until it is split)
   - `openswim/sync/request` - "Sync now" from the app; queues a sync immediately (no debounce)
 - Publish:
   - `openswim/device/status` (retained) - `{status: "connected"|"safe_to_unplug"|"disconnected", device, mount_point, timestamp}`
@@ -99,4 +100,5 @@ Ensure `yt-dlp`, `ffmpeg`, and optionally `piper` are installed and on PATH. The
 - Delete `info.json` files to clear cached library state.
 - Simulate MQTT by publishing to topics with JSON payloads.
 - YouTube playlist sync is limited to the newest `PLAYLIST_SYNC_LIMIT` (20) items, for both the library download and the device copy (`videos_to_sync()` in `media/youtube/playlists.py`).
+- The player does not record what it plays: tested 2026-11-19, it writes no FAT last-opened dates and keeps no resume file on its disk. It remembers its place internally but loses it whenever it is plugged in, so the user tells the app which part to start from (`start_part`).
 - `uv run --extra dev pytest` runs the tests; `test_sanitize.py::test_special_characters_removed` is a known failure that predates the Pi sync work.

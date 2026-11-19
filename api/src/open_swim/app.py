@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 from open_swim.config import config
 from open_swim.device import create_device_monitor
-from open_swim.media.podcast.episodes_to_sync import update_episodes_to_sync
+from open_swim.media.podcast.episodes_to_sync import episodes_to_sync_response, update_episodes_to_sync
 from open_swim.media.podcast import store as podcast_store
 from open_swim.sync import enqueue_sync, enqueue_sync_after_quiet_period, start_periodic_sync
 from open_swim.media.youtube.playlists_to_sync import update_playlists_to_sync
@@ -125,7 +125,7 @@ def _handle_episodes_to_sync_request(client: MqttClient) -> None:
     """Handle request for current episodes to sync list."""
     try:
         episodes = podcast_store.load_episode_requests()
-        response = json.dumps([ep.model_dump(mode="json") for ep in episodes])
+        response = json.dumps(episodes_to_sync_response(episodes, podcast_store.load_library()))
         client.publish(
             "openswim/episodes-to-sync/response",
             response,

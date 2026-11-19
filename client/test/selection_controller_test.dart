@@ -2,11 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:open_swim/models/podcast_episode.dart';
 import 'package:open_swim/state/selection_controller.dart';
 
-Map<String, dynamic> serverEntry(String id, {String date = '2026-05-11T15:03:10.000Z'}) => {
+Map<String, dynamic> serverEntry(
+  String id, {
+  String date = '2026-05-11T15:03:10.000Z',
+  int? startPart,
+  int? partCount,
+}) =>
+    {
       'id': id,
       'date': date,
       'title': 'Episode $id',
       'download_url': 'https://example.com/$id.mp3',
+      if (startPart != null) 'start_part': startPart,
+      'part_count': partCount,
     };
 
 PodcastEpisode feedEpisode(String id, DateTime published) => PodcastEpisode(
@@ -105,6 +113,60 @@ void main() {
       expect(selection.awaitingConfirmation, isFalse);
       expect(selection.hasChanges, isTrue);
       expect(selection.draftIds, {'a', 'b'});
+    });
+  });
+
+  group('start part', () {
+    test('mirrors the Pi and counts a moved start as one change', () {
+      final selection = SelectionController()
+        ..applyServerList([serverEntry('a', startPart: 4, partCount: 18), serverEntry('b')]);
+
+      expect(selection.startPart('a'), 4);
+      expect(selection.partCount('a'), 18);
+      expect(selection.startPart('b'), 1);
+      expect(selection.partCount('b'), isNull);
+      expect(selection.hasChanges, isFalse);
+
+      selection.setStartPart('a', 10);
+
+      expect(selection.changeCount, 1);
+      selection.discardChanges();
+      expect(selection.startPart('a'), 4);
+    });
+
+    test('stays between 1 and the part count', () {
+      final selection = SelectionController()..applyServerList([serverEntry('a', partCount: 3)]);
+
+      selection.setStartPart('a', 9);
+      expect(selection.startPart('a'), 3);
+
+      selection.setStartPart('a', 0);
+      expect(selection.startPart('a'), 1);
+      expect(selection.hasChanges, isFalse);
+    });
+
+    test('is sent with Submit and confirmed only when the Pi has it', () {
+      final selection = SelectionController()..applyServerList([serverEntry('a', partCount: 18)]);
+      selection.setStartPart('a', 10);
+
+      expect(selection.payloadJson(const []).single['start_part'], 10);
+
+      selection.submitted();
+      expect(selection.applyServerList([serverEntry('a', partCount: 18)]), isFalse);
+      expect(selection.startPart('a'), 10);
+      expect(selection.applyServerList([serverEntry('a', startPart: 10, partCount: 18)]), isTrue);
+      expect(selection.hasChanges, isFalse);
+    });
+
+    test('unticking forgets an edited start; ticking again restores the Pi one', () {
+      final selection = SelectionController()..applyServerList([serverEntry('a', startPart: 4)]);
+      selection
+        ..setStartPart('a', 6)
+        ..toggle('a')
+        ..toggle('a');
+
+      expect(selection.startPart('a'), 4);
+      expect(selection.hasChanges, isFalse);
     });
   });
 }

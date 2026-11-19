@@ -38,7 +38,7 @@ PY
 ```
 
 ## MQTT contract
-- Subscribes: `openswim/episodes_to_sync` (JSON array of `{id, date, download_url, title}`); `openswim/playlists_to_sync` (JSON array of `{id, title}` where id is the playlist id).
+- Subscribes: `openswim/episodes_to_sync` (JSON array of `{id, date, download_url, title, start_part?}`; parts before `start_part` are left off the player); `openswim/playlists_to_sync` (JSON array of `{id, title}` where id is the playlist id).
 - Publishes: `openswim/device/status` with `status` (`connected`/`disconnected`), `device`, `mount_point`, and a timestamp; retained to advertise current state.
 
 ## Library and device layout

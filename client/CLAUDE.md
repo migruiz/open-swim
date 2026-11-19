@@ -83,8 +83,8 @@ Constants live in `Topics` in `lib/services/mqtt_service.dart`; the server side 
 
 | Topic | Direction | Payload |
 |-------|-----------|---------|
-| `openswim/episodes_to_sync` | Client → Pi | Full list `[{id, date, title, download_url}, ...]`, sent only on Submit |
-| `openswim/episodes-to-sync/request` → `/response` | Client ↔ Pi | Pi's saved picks (same shape); also used to confirm a Submit |
+| `openswim/episodes_to_sync` | Client → Pi | Full list `[{id, date, title, download_url, start_part}, ...]`, sent only on Submit |
+| `openswim/episodes-to-sync/request` → `/response` | Client ↔ Pi | Pi's saved picks (same shape, plus `part_count`, null until split); also used to confirm a Submit |
 | `openswim/playlists-to-sync/request` → `/response` | Client ↔ Pi | `[{id, title}, ...]` playlists the Pi syncs (one tab each) |
 | `openswim/playlist-info/request` → `/response` | Client ↔ Pi | `{playlist_id}` → `{success, playlist_id, title, videos: [{id, title}], error}` (oldest first) |
 | `openswim/device/status` | Pi → Client (retained) | `{status: connected\|safe_to_unplug\|disconnected, device, timestamp}` |
@@ -93,6 +93,8 @@ Constants live in `Topics` in `lib/services/mqtt_service.dart`; the server side 
 ## Podcast picks
 
 `SelectionController` (`lib/state/`) owns the picks: the Pi's saved list plus unsent edits. Episodes from the RSS feed carry no selection state, so reloading the feed can't clear picks. Ticking is disabled until the Pi's list has arrived, edits are sent only with Submit (disabled while disconnected), and a Submit counts as saved only when the Pi's list comes back matching.
+
+Each picked episode also has a start part ("Start at part 10 of 18", with − / +). The player keeps its place on its own but loses it whenever it is plugged in, and it records nothing the Pi can read, so the user sets the part they reached (each part begins with a spoken "10 of 18") and the Pi leaves the earlier parts off the player.
 
 ## Releases
 

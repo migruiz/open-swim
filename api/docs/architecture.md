@@ -9,7 +9,7 @@ Open Swim is a long-running worker that reacts to MQTT messages, shapes media in
 
 ## MQTT contract
 - Subscribed topics
-  - `openswim/episodes_to_sync`: JSON array of podcast episodes (`id`, ISO `date`, `download_url`, `title`). Persisted to `LIBRARY_PATH/podcasts/episodes_to_sync.json`.
+  - `openswim/episodes_to_sync`: JSON array of podcast episodes (`id`, ISO `date`, `download_url`, `title`, optional `start_part`: parts before it are left off the player). Persisted to `LIBRARY_PATH/podcasts/episodes_to_sync.json`.
   - `openswim/playlists_to_sync`: JSON array of playlist ids and titles (`id`, `title`). Persisted to `LIBRARY_PATH/youtube/playlists_to_sync.json`.
 - Published topic
   - `openswim/device/status` (retained): `{status, device, mount_point, timestamp}` whenever the device mounts/unmounts and on startup once the MQTT client is ready.

@@ -139,3 +139,99 @@ class TestPodcastCopy:
 
         assert sorted(p.name for p in (device / "podcast").iterdir()) == ["ok_001.mp3"]
         assert load_sync_state(str(device)).podcasts.synced_episode_ids == ["ok"]
+
+
+class TestPodcastStartPart:
+    """Parts before an episode's start part are heard and left off the player."""
+
+    @pytest.fixture
+    def setup(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> "TestPodcastStartPart":
+        self.device = tmp_path / "device"
+        (self.device / "podcast").mkdir(parents=True)
+        self.episodes: List[EpisodeRequest] = []
+        records = {}
+        for episode_id, date, parts in (("old", "2026-05-11", 3), ("new", "2026-05-12", 4)):
+            episode_dir = tmp_path / "library" / episode_id
+            episode_dir.mkdir(parents=True)
+            for index in range(1, parts + 1):
+                (episode_dir / f"{episode_id}_{index:03d}.mp3").write_bytes(f"{episode_id}{index}".encode())
+            self.episodes.append(EpisodeRequest(id=episode_id, title=episode_id, date=date, download_url="http://x"))
+            records[episode_id] = EpisodeRecord(id=episode_id, title=episode_id, date=date, episode_dir=str(episode_dir))
+
+        monkeypatch.setattr(
+            device_podcast_sync, "config", dataclasses.replace(config, device_sd_path=str(self.device))
+        )
+        monkeypatch.setattr(device_podcast_sync, "load_episodes_to_sync", lambda: self.episodes)
+        monkeypatch.setattr(device_podcast_sync.store, "load_library", lambda: PodcastLibrary(episodes=records))
+
+        self.copied: List[str] = []
+        real_copy = files.copy_file_to_device
+
+        def copy(source: str, destination: str) -> None:
+            self.copied.append(Path(destination).name)
+            real_copy(source, destination)
+
+        monkeypatch.setattr(device_podcast_sync, "copy_file_to_device", copy)
+        return self
+
+    def _start(self, episode_id: str, part: int) -> None:
+        self.episodes = [
+            e.model_copy(update={"start_part": part}) if e.id == episode_id else e for e in self.episodes
+        ]
+
+    def _sync(self) -> List[str]:
+        self.copied = []
+        device_podcast_sync.sync_podcast_episodes_to_device()
+        return sorted(p.name for p in (self.device / "podcast").iterdir())
+
+    def test_first_copy_skips_heard_parts_and_keeps_play_order(self, setup: "TestPodcastStartPart") -> None:
+        self._start("old", 2)
+
+        on_device = self._sync()
+
+        assert on_device == ["new_001.mp3", "new_002.mp3", "new_003.mp3", "new_004.mp3", "old_002.mp3", "old_003.mp3"]
+        assert self.copied == ["old_002.mp3", "old_003.mp3", "new_001.mp3", "new_002.mp3", "new_003.mp3", "new_004.mp3"]
+
+    def test_moving_forward_only_deletes(self, setup: "TestPodcastStartPart") -> None:
+        self._sync()
+        self._start("new", 3)
+
+        on_device = self._sync()
+
+        assert self.copied == []
+        assert on_device == ["new_003.mp3", "new_004.mp3", "old_001.mp3", "old_002.mp3", "old_003.mp3"]
+
+    def test_nothing_changed_writes_nothing(self, setup: "TestPodcastStartPart") -> None:
+        self._sync()
+        state_before = (self.device / "sync_state.json").stat().st_mtime_ns
+
+        self._sync()
+
+        assert self.copied == []
+        assert (self.device / "sync_state.json").stat().st_mtime_ns == state_before
+
+    def test_going_back_copies_again_in_order(self, setup: "TestPodcastStartPart") -> None:
+        self._start("old", 3)
+        self._sync()
+        self._start("old", 1)
+
+        on_device = self._sync()
+
+        assert self.copied[:3] == ["old_001.mp3", "old_002.mp3", "old_003.mp3"]
+        assert len(on_device) == 7
+
+    def test_start_past_the_last_part_leaves_none(self, setup: "TestPodcastStartPart") -> None:
+        self._start("old", 9)
+
+        on_device = self._sync()
+
+        assert on_device == ["new_001.mp3", "new_002.mp3", "new_003.mp3", "new_004.mp3"]
+        assert load_sync_state(str(self.device)).podcasts.synced_episode_ids == ["old", "new"]
+
+    def test_partial_copy_left_by_a_pulled_plug_is_replaced(self, setup: "TestPodcastStartPart") -> None:
+        self._sync()
+        (self.device / "podcast" / "new_002.mp3").write_bytes(b"n")  # shorter than the library file
+
+        self._sync()
+
+        assert (self.device / "podcast" / "new_002.mp3").read_bytes() == b"new2"

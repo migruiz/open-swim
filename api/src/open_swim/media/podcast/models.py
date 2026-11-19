@@ -23,6 +23,9 @@ class EpisodeRequest(BaseModel):
     date: datetime
     download_url: str
     title: str
+    # The part the user has reached; parts before it are heard and left off
+    # the player. Counts from 1, like the spoken "3 of 18" at the start of a part.
+    start_part: int = 1
 
 
 class EpisodeRecord(BaseModel):

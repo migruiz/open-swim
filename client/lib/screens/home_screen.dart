@@ -112,9 +112,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _submit() {
-    final payload = json.encode(
-      _selection.payload(_podcastService.cachedEpisodes).map((e) => e.toSyncJson()).toList(),
-    );
+    final payload = json.encode(_selection.payloadJson(_podcastService.cachedEpisodes));
     if (!_mqttService.publishMessage(Topics.episodesToSync, payload)) {
       _showSnack('Not connected. Nothing was sent.');
       return;

@@ -40,13 +40,15 @@ class PodcastEpisode {
     );
   }
 
-  /// Convert to sync JSON payload for MQTT
-  Map<String, dynamic> toSyncJson() {
+  /// Convert to sync JSON payload for MQTT. [startPart] is the part the user
+  /// has reached; the Pi leaves earlier parts off the player.
+  Map<String, dynamic> toSyncJson({int startPart = 1}) {
     return {
       'id': id,
       'date': published.toIso8601String(),
       'title': title,
       'download_url': mediaUrl,
+      'start_part': startPart,
     };
   }
 
